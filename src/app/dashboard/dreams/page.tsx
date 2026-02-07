@@ -23,8 +23,9 @@ export default function DreamsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [newDream, setNewDream] = useState({ title: '', description: '' });
 
-    const userId = session?.user?.id || session?.user?.email || 'local';
-    const useCloud = isSupabaseConfigured() && session?.user?.id;
+    // Use email as userId for consistent identification across devices
+    const userId = session?.user?.email || 'local';
+    const useCloud = isSupabaseConfigured() && !!session?.user?.email;
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -35,22 +36,22 @@ export default function DreamsPage() {
     const loadDreams = useCallback(async () => {
         setIsLoading(true);
         try {
-            if (useCloud && session?.user?.id) {
-                // Load from Supabase
-                const cloudDreams = await fetchDreamsFromCloud(session.user.id);
+            if (useCloud && session?.user?.email) {
+                console.log('[Dreams] Loading from cloud for user:', session.user.email);
+                const cloudDreams = await fetchDreamsFromCloud(session.user.email);
+                console.log('[Dreams] Loaded from cloud:', cloudDreams.length, 'dreams');
                 setDreams(cloudDreams);
             } else {
-                // Fallback to localStorage
+                console.log('[Dreams] Loading from localStorage');
                 setDreams(getStoredDreams());
             }
         } catch (error) {
             console.error('Error loading dreams:', error);
-            // Fallback to localStorage on error
             setDreams(getStoredDreams());
         } finally {
             setIsLoading(false);
         }
-    }, [useCloud, session?.user?.id]);
+    }, [useCloud, session?.user?.email]);
 
     useEffect(() => {
         if (status !== 'loading') {

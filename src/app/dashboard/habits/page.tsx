@@ -64,8 +64,9 @@ export default function HabitsPage() {
     const [progressLogs, setProgressLogs] = useState<ProgressLog[]>([]);
     const today = getToday();
 
-    const userId = session?.user?.id || session?.user?.email || 'local';
-    const useCloud = isSupabaseConfigured() && session?.user?.id;
+    // Use email as userId for consistent identification across devices
+    const userId = session?.user?.email || 'local';
+    const useCloud = isSupabaseConfigured() && !!session?.user?.email;
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -75,12 +76,14 @@ export default function HabitsPage() {
 
     const loadData = useCallback(async () => {
         try {
-            if (useCloud && session?.user?.id) {
+            if (useCloud && session?.user?.email) {
+                console.log('[Habits] Loading from cloud for user:', session.user.email);
                 const [cloudHabits, cloudGoals, cloudLogs] = await Promise.all([
-                    fetchHabitsFromCloud(session.user.id),
-                    fetchGoalsFromCloud(session.user.id),
-                    fetchProgressLogsFromCloud(session.user.id)
+                    fetchHabitsFromCloud(session.user.email),
+                    fetchGoalsFromCloud(session.user.email),
+                    fetchProgressLogsFromCloud(session.user.email)
                 ]);
+                console.log('[Habits] Loaded:', cloudHabits.length, 'habits,', cloudLogs.length, 'logs');
                 setHabits(cloudHabits);
                 setGoals(cloudGoals);
                 setProgressLogs(cloudLogs);
@@ -95,7 +98,7 @@ export default function HabitsPage() {
             setGoals(getStoredGoals());
             setProgressLogs(getStoredProgressLogs());
         }
-    }, [useCloud, session?.user?.id]);
+    }, [useCloud, session?.user?.email]);
 
     useEffect(() => {
         if (status !== 'loading') {
