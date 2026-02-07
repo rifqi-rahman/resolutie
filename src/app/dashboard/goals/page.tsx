@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
@@ -12,6 +12,14 @@ import {
     updateStoredGoal,
     getStoredDreams
 } from '@/lib/storage';
+import {
+    fetchGoalsFromCloud,
+    saveGoalToCloud,
+    deleteGoalFromCloud,
+    updateGoalInCloud,
+    fetchDreamsFromCloud
+} from '@/lib/cloudStorage';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { generateId, formatDateDisplay } from '@/lib/utils';
 import { useToast } from '@/components/providers';
 import { Goal, Dream, GoalStatus } from '@/types';
@@ -37,22 +45,42 @@ function GoalsPageContent() {
         timeBound: ''
     });
 
+    const userId = session?.user?.id || session?.user?.email || 'local';
+    const useCloud = isSupabaseConfigured() && session?.user?.id;
+
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/');
         }
     }, [status, router]);
 
+    const loadData = useCallback(async () => {
+        try {
+            if (useCloud && session?.user?.id) {
+                const [cloudGoals, cloudDreams] = await Promise.all([
+                    fetchGoalsFromCloud(session.user.id),
+                    fetchDreamsFromCloud(session.user.id)
+                ]);
+                setGoals(cloudGoals);
+                setDreams(cloudDreams);
+            } else {
+                setGoals(getStoredGoals());
+                setDreams(getStoredDreams());
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+            setGoals(getStoredGoals());
+            setDreams(getStoredDreams());
+        }
+    }, [useCloud, session?.user?.id]);
+
     useEffect(() => {
-        loadData();
-    }, []);
+        if (status !== 'loading') {
+            loadData();
+        }
+    }, [status, loadData]);
 
-    const loadData = () => {
-        setGoals(getStoredGoals());
-        setDreams(getStoredDreams());
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newGoal.title.trim()) {
             addToast('error', 'Judul goal tidak boleh kosong');
@@ -65,7 +93,7 @@ function GoalsPageContent() {
 
         const goal: Goal = {
             id: generateId(),
-            userId: session?.user?.email || 'local',
+            userId: userId,
             dreamId: newGoal.dreamId || undefined,
             title: newGoal.title,
             specific: newGoal.specific,
@@ -77,11 +105,19 @@ function GoalsPageContent() {
             createdAt: new Date(),
         };
 
-        addStoredGoal(goal);
-        resetForm();
-        setIsModalOpen(false);
-        loadData();
-        addToast('success', 'Goal berhasil ditambahkan! 🎯');
+        try {
+            if (useCloud) {
+                await saveGoalToCloud(goal);
+            }
+            addStoredGoal(goal);
+            resetForm();
+            setIsModalOpen(false);
+            await loadData();
+            addToast('success', useCloud ? 'Goal tersimpan ke cloud! ☁️🎯' : 'Goal berhasil ditambahkan! 🎯');
+        } catch (error) {
+            console.error('Error saving goal:', error);
+            addToast('error', 'Gagal menyimpan goal');
+        }
     };
 
     const resetForm = () => {
@@ -96,18 +132,34 @@ function GoalsPageContent() {
         });
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (confirm('Yakin ingin menghapus goal ini?')) {
-            deleteStoredGoal(id);
-            loadData();
-            addToast('info', 'Goal dihapus');
+            try {
+                if (useCloud) {
+                    await deleteGoalFromCloud(id);
+                }
+                deleteStoredGoal(id);
+                await loadData();
+                addToast('info', 'Goal dihapus');
+            } catch (error) {
+                console.error('Error deleting goal:', error);
+                addToast('error', 'Gagal menghapus goal');
+            }
         }
     };
 
-    const handleStatusChange = (id: string, status: GoalStatus) => {
-        updateStoredGoal(id, { status });
-        loadData();
-        addToast('success', `Status diubah menjadi ${status}`);
+    const handleStatusChange = async (id: string, newStatus: GoalStatus) => {
+        try {
+            if (useCloud) {
+                await updateGoalInCloud(id, { status: newStatus });
+            }
+            updateStoredGoal(id, { status: newStatus });
+            await loadData();
+            addToast('success', `Status diubah menjadi ${newStatus}`);
+        } catch (error) {
+            console.error('Error updating goal:', error);
+            addToast('error', 'Gagal mengubah status');
+        }
     };
 
     const filteredGoals = filter === 'all'

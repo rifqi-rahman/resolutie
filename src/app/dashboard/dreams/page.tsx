@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import Sidebar from '@/components/layout/Sidebar';
 import { getStoredDreams, addStoredDream, deleteStoredDream } from '@/lib/storage';
+import { fetchDreamsFromCloud, saveDreamToCloud, deleteDreamFromCloud } from '@/lib/cloudStorage';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { generateId, formatDateDisplay } from '@/lib/utils';
 import { useToast } from '@/components/providers';
 import { Dream } from '@/types';
@@ -18,7 +20,11 @@ export default function DreamsPage() {
     const [dreams, setDreams] = useState<Dream[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [newDream, setNewDream] = useState({ title: '', description: '' });
+
+    const userId = session?.user?.id || session?.user?.email || 'local';
+    const useCloud = isSupabaseConfigured() && session?.user?.id;
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -26,15 +32,33 @@ export default function DreamsPage() {
         }
     }, [status, router]);
 
+    const loadDreams = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            if (useCloud && session?.user?.id) {
+                // Load from Supabase
+                const cloudDreams = await fetchDreamsFromCloud(session.user.id);
+                setDreams(cloudDreams);
+            } else {
+                // Fallback to localStorage
+                setDreams(getStoredDreams());
+            }
+        } catch (error) {
+            console.error('Error loading dreams:', error);
+            // Fallback to localStorage on error
+            setDreams(getStoredDreams());
+        } finally {
+            setIsLoading(false);
+        }
+    }, [useCloud, session?.user?.id]);
+
     useEffect(() => {
-        loadDreams();
-    }, []);
+        if (status !== 'loading') {
+            loadDreams();
+        }
+    }, [status, loadDreams]);
 
-    const loadDreams = () => {
-        setDreams(getStoredDreams());
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newDream.title.trim()) {
             addToast('error', 'Judul dream tidak boleh kosong');
@@ -43,24 +67,44 @@ export default function DreamsPage() {
 
         const dream: Dream = {
             id: generateId(),
-            userId: session?.user?.email || 'local',
+            userId: userId,
             title: newDream.title,
             description: newDream.description,
             createdAt: new Date(),
         };
 
-        addStoredDream(dream);
-        setNewDream({ title: '', description: '' });
-        setIsModalOpen(false);
-        loadDreams();
-        addToast('success', 'Dream berhasil ditambahkan! ✨');
+        try {
+            if (useCloud) {
+                // Save to Supabase
+                const success = await saveDreamToCloud(dream);
+                if (!success) throw new Error('Failed to save to cloud');
+            }
+            // Also save to localStorage as backup
+            addStoredDream(dream);
+
+            setNewDream({ title: '', description: '' });
+            setIsModalOpen(false);
+            await loadDreams();
+            addToast('success', useCloud ? 'Dream tersimpan ke cloud! ☁️✨' : 'Dream berhasil ditambahkan! ✨');
+        } catch (error) {
+            console.error('Error saving dream:', error);
+            addToast('error', 'Gagal menyimpan dream');
+        }
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (confirm('Yakin ingin menghapus dream ini?')) {
-            deleteStoredDream(id);
-            loadDreams();
-            addToast('info', 'Dream dihapus');
+            try {
+                if (useCloud) {
+                    await deleteDreamFromCloud(id);
+                }
+                deleteStoredDream(id);
+                await loadDreams();
+                addToast('info', 'Dream dihapus');
+            } catch (error) {
+                console.error('Error deleting dream:', error);
+                addToast('error', 'Gagal menghapus dream');
+            }
         }
     };
 

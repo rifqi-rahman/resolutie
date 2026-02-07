@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
@@ -15,6 +15,16 @@ import {
     addProgressLog,
     removeProgressLog
 } from '@/lib/storage';
+import {
+    fetchHabitsFromCloud,
+    saveHabitToCloud,
+    deleteHabitFromCloud,
+    fetchGoalsFromCloud,
+    fetchProgressLogsFromCloud,
+    saveProgressLogToCloud,
+    deleteProgressLogFromCloud
+} from '@/lib/cloudStorage';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { generateId, getToday, formatDateDisplay } from '@/lib/utils';
 import { useToast } from '@/components/providers';
 import { Habit, Goal, ProgressLog } from '@/types';
@@ -51,7 +61,11 @@ export default function HabitsPage() {
         goalId: '',
         frequency: 'daily'
     });
+    const [progressLogs, setProgressLogs] = useState<ProgressLog[]>([]);
     const today = getToday();
+
+    const userId = session?.user?.id || session?.user?.email || 'local';
+    const useCloud = isSupabaseConfigured() && session?.user?.id;
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -59,16 +73,44 @@ export default function HabitsPage() {
         }
     }, [status, router]);
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    const loadData = useCallback(async () => {
+        try {
+            if (useCloud && session?.user?.id) {
+                const [cloudHabits, cloudGoals, cloudLogs] = await Promise.all([
+                    fetchHabitsFromCloud(session.user.id),
+                    fetchGoalsFromCloud(session.user.id),
+                    fetchProgressLogsFromCloud(session.user.id)
+                ]);
+                setHabits(cloudHabits);
+                setGoals(cloudGoals);
+                setProgressLogs(cloudLogs);
+            } else {
+                setHabits(getStoredHabits());
+                setGoals(getStoredGoals());
+                setProgressLogs(getStoredProgressLogs());
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+            setHabits(getStoredHabits());
+            setGoals(getStoredGoals());
+            setProgressLogs(getStoredProgressLogs());
+        }
+    }, [useCloud, session?.user?.id]);
 
-    const loadData = () => {
-        setHabits(getStoredHabits());
-        setGoals(getStoredGoals());
+    useEffect(() => {
+        if (status !== 'loading') {
+            loadData();
+        }
+    }, [status, loadData]);
+
+    const isHabitCompleted = (habitId: string) => {
+        if (useCloud) {
+            return progressLogs.some(log => log.habitId === habitId && log.date === today);
+        }
+        return isHabitCompletedForDate(habitId, today);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newHabit.title.trim()) {
             addToast('error', 'Judul habit tidak boleh kosong');
@@ -77,7 +119,7 @@ export default function HabitsPage() {
 
         const habit: Habit = {
             id: generateId(),
-            userId: session?.user?.email || 'local',
+            userId: userId,
             title: newHabit.title,
             label: newHabit.label,
             goalId: newHabit.goalId || undefined,
@@ -85,40 +127,67 @@ export default function HabitsPage() {
             createdAt: new Date(),
         };
 
-        addStoredHabit(habit);
-        setNewHabit({ title: '', label: HABIT_LABELS[0], goalId: '', frequency: 'daily' });
-        setIsModalOpen(false);
-        loadData();
-        addToast('success', 'Habit berhasil ditambahkan! ✅');
+        try {
+            if (useCloud) {
+                await saveHabitToCloud(habit);
+            }
+            addStoredHabit(habit);
+            setNewHabit({ title: '', label: HABIT_LABELS[0], goalId: '', frequency: 'daily' });
+            setIsModalOpen(false);
+            await loadData();
+            addToast('success', useCloud ? 'Habit tersimpan ke cloud! ☁️✅' : 'Habit berhasil ditambahkan! ✅');
+        } catch (error) {
+            console.error('Error saving habit:', error);
+            addToast('error', 'Gagal menyimpan habit');
+        }
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (confirm('Yakin ingin menghapus habit ini?')) {
-            deleteStoredHabit(id);
-            loadData();
-            addToast('info', 'Habit dihapus');
+            try {
+                if (useCloud) {
+                    await deleteHabitFromCloud(id);
+                }
+                deleteStoredHabit(id);
+                await loadData();
+                addToast('info', 'Habit dihapus');
+            } catch (error) {
+                console.error('Error deleting habit:', error);
+                addToast('error', 'Gagal menghapus habit');
+            }
         }
     };
 
-    const toggleHabit = (habitId: string) => {
-        const isCompleted = isHabitCompletedForDate(habitId, today);
+    const toggleHabit = async (habitId: string) => {
+        const isCompleted = isHabitCompleted(habitId);
 
-        if (isCompleted) {
-            removeProgressLog(habitId, today);
-            addToast('info', 'Habit dibatalkan');
-        } else {
-            const log: ProgressLog = {
-                id: generateId(),
-                habitId,
-                userId: session?.user?.email || 'local',
-                completedAt: new Date(),
-                date: today,
-            };
-            addProgressLog(log);
-            addToast('success', 'Habit selesai! 🎉');
+        try {
+            if (isCompleted) {
+                if (useCloud) {
+                    await deleteProgressLogFromCloud(habitId, today);
+                }
+                removeProgressLog(habitId, today);
+                await loadData();
+                addToast('info', 'Habit dibatalkan');
+            } else {
+                const log: ProgressLog = {
+                    id: generateId(),
+                    habitId,
+                    userId: userId,
+                    completedAt: new Date(),
+                    date: today,
+                };
+                if (useCloud) {
+                    await saveProgressLogToCloud(log);
+                }
+                addProgressLog(log);
+                await loadData();
+                addToast('success', 'Habit selesai! 🎉');
+            }
+        } catch (error) {
+            console.error('Error toggling habit:', error);
+            addToast('error', 'Gagal mengubah status habit');
         }
-
-        loadData();
     };
 
     // Group habits by label
@@ -128,7 +197,7 @@ export default function HabitsPage() {
         return acc;
     }, {} as Record<string, Habit[]>);
 
-    const completedCount = habits.filter(h => isHabitCompletedForDate(h.id, today)).length;
+    const completedCount = habits.filter(h => isHabitCompleted(h.id)).length;
     const completionPercent = habits.length > 0 ? Math.round((completedCount / habits.length) * 100) : 0;
 
     if (status === 'loading' || !session) {
@@ -190,12 +259,12 @@ export default function HabitsPage() {
                                         <h3 className={styles.labelTitle}>
                                             <span className="neo-badge neo-badge-primary">{label}</span>
                                             <span className={styles.labelCount}>
-                                                {labelHabits.filter(h => isHabitCompletedForDate(h.id, today)).length}/{labelHabits.length}
+                                                {labelHabits.filter(h => isHabitCompleted(h.id)).length}/{labelHabits.length}
                                             </span>
                                         </h3>
                                         <div className={styles.habitsList}>
                                             {labelHabits.map(habit => {
-                                                const isCompleted = isHabitCompletedForDate(habit.id, today);
+                                                const isCompleted = isHabitCompleted(habit.id);
                                                 const linkedGoal = goals.find(g => g.id === habit.goalId);
 
                                                 return (
