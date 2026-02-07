@@ -263,11 +263,34 @@ CREATE TABLE IF NOT EXISTS progress_logs (
     completed_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Disable RLS for development (enable later for production!)
-ALTER TABLE dreams DISABLE ROW LEVEL SECURITY;
-ALTER TABLE goals DISABLE ROW LEVEL SECURITY;
-ALTER TABLE habits DISABLE ROW LEVEL SECURITY;
-ALTER TABLE progress_logs DISABLE ROW LEVEL SECURITY;
+-- Enable RLS and create security policies
+ALTER TABLE dreams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE habits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE progress_logs ENABLE ROW LEVEL SECURITY;
+
+-- Policies for dreams
+CREATE POLICY "Users can view own dreams" ON dreams FOR SELECT USING (true);
+CREATE POLICY "Users can insert own dreams" ON dreams FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update own dreams" ON dreams FOR UPDATE USING (true);
+CREATE POLICY "Users can delete own dreams" ON dreams FOR DELETE USING (true);
+
+-- Policies for goals
+CREATE POLICY "Users can view own goals" ON goals FOR SELECT USING (true);
+CREATE POLICY "Users can insert own goals" ON goals FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update own goals" ON goals FOR UPDATE USING (true);
+CREATE POLICY "Users can delete own goals" ON goals FOR DELETE USING (true);
+
+-- Policies for habits
+CREATE POLICY "Users can view own habits" ON habits FOR SELECT USING (true);
+CREATE POLICY "Users can insert own habits" ON habits FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update own habits" ON habits FOR UPDATE USING (true);
+CREATE POLICY "Users can delete own habits" ON habits FOR DELETE USING (true);
+
+-- Policies for progress_logs
+CREATE POLICY "Users can view own logs" ON progress_logs FOR SELECT USING (true);
+CREATE POLICY "Users can insert own logs" ON progress_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can delete own logs" ON progress_logs FOR DELETE USING (true);
 ```
 
 ### C. Supabase Client (`src/lib/supabase.ts`)
@@ -494,7 +517,7 @@ Vercel akan auto-deploy dari `main` branch.
 
 1. **Fetch data sekali** saat page load, bukan setiap render
 2. **Use parallel requests** dengan `Promise.all()`
-3. **Disable RLS saat development** (lebih cepat), enable di production
+3. **Keep RLS enabled** - filtering dilakukan di code dengan `.eq('user_id', email)`
 
 ---
 
@@ -544,12 +567,9 @@ ALTER TABLE tablename DROP CONSTRAINT IF EXISTS constraint_name;
 
 ### 🔜 Short-term Improvements
 
-1. **Enable RLS di Production**
-   ```sql
-   ALTER TABLE dreams ENABLE ROW LEVEL SECURITY;
-   CREATE POLICY "Users can CRUD own data" ON dreams
-     FOR ALL USING (user_id = current_user_email());
-   ```
+1. **Implement Supabase Auth** untuk keamanan RLS lebih kuat
+   - Gunakan Supabase Auth bersama NextAuth
+   - RLS Policy bisa pakai `auth.uid()` langsung
 
 2. **Sync localStorage ke Cloud** saat user login pertama kali
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     getStoredHabits,
     getStoredGoals,
@@ -10,6 +10,15 @@ import {
     addProgressLog,
     removeProgressLog
 } from '@/lib/storage';
+import {
+    fetchHabitsFromCloud,
+    fetchGoalsFromCloud,
+    fetchDreamsFromCloud,
+    fetchProgressLogsFromCloud,
+    saveProgressLogToCloud,
+    deleteProgressLogFromCloud
+} from '@/lib/cloudStorage';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import {
     getToday,
     formatDateDisplay,
@@ -38,58 +47,103 @@ export default function DashboardContent({ user }: DashboardContentProps) {
     const [longestStreak, setLongestStreak] = useState(0);
     const today = getToday();
 
+    // Use email as userId for consistent identification across devices
+    const userId = user.email || 'local';
+    const useCloud = isSupabaseConfigured() && !!user.email;
+
+    const loadData = useCallback(async () => {
+        try {
+            let storedHabits: Habit[];
+            let storedGoals: Goal[];
+            let storedDreams: Dream[];
+            let storedLogs: ProgressLog[];
+
+            if (useCloud) {
+                console.log('[Dashboard] Loading from cloud for user:', userId);
+                [storedHabits, storedGoals, storedDreams, storedLogs] = await Promise.all([
+                    fetchHabitsFromCloud(userId),
+                    fetchGoalsFromCloud(userId),
+                    fetchDreamsFromCloud(userId),
+                    fetchProgressLogsFromCloud(userId)
+                ]);
+                console.log('[Dashboard] Loaded:', storedHabits.length, 'habits,', storedGoals.length, 'goals,', storedDreams.length, 'dreams');
+            } else {
+                storedHabits = getStoredHabits();
+                storedGoals = getStoredGoals();
+                storedDreams = getStoredDreams();
+                storedLogs = getStoredProgressLogs();
+            }
+
+            setHabits(storedHabits);
+            setGoals(storedGoals);
+            setDreams(storedDreams);
+            setProgressLogs(storedLogs);
+
+            // Calculate streak
+            if (storedHabits.length > 0) {
+                const habitIds = storedHabits.map(h => h.id);
+                const streak = calculateStreak(storedLogs, habitIds);
+                setCurrentStreak(streak.currentStreak);
+                setLongestStreak(streak.longestStreak);
+            }
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+            // Fallback to localStorage
+            setHabits(getStoredHabits());
+            setGoals(getStoredGoals());
+            setDreams(getStoredDreams());
+            setProgressLogs(getStoredProgressLogs());
+        }
+    }, [useCloud, userId]);
+
     useEffect(() => {
         loadData();
-    }, []);
+    }, [loadData]);
 
-    const loadData = () => {
-        const storedHabits = getStoredHabits();
-        const storedGoals = getStoredGoals();
-        const storedDreams = getStoredDreams();
-        const storedLogs = getStoredProgressLogs();
+    const isHabitCompleted = (habitId: string) => {
+        if (useCloud) {
+            return progressLogs.some(log => log.habitId === habitId && log.date === today);
+        }
+        return isHabitCompletedForDate(habitId, today);
+    };
 
-        setHabits(storedHabits);
-        setGoals(storedGoals);
-        setDreams(storedDreams);
-        setProgressLogs(storedLogs);
+    const toggleHabit = async (habitId: string) => {
+        const isCompleted = isHabitCompleted(habitId);
 
-        // Calculate streak
-        if (storedHabits.length > 0) {
-            const habitIds = storedHabits.map(h => h.id);
-            const streak = calculateStreak(storedLogs, habitIds);
-            setCurrentStreak(streak.currentStreak);
-            setLongestStreak(streak.longestStreak);
+        try {
+            if (isCompleted) {
+                if (useCloud) {
+                    await deleteProgressLogFromCloud(habitId, today);
+                }
+                removeProgressLog(habitId, today);
+                addToast('info', 'Habit dibatalkan');
+            } else {
+                const log: ProgressLog = {
+                    id: generateId(),
+                    habitId,
+                    userId: userId,
+                    completedAt: new Date(),
+                    date: today,
+                };
+                if (useCloud) {
+                    await saveProgressLogToCloud(log);
+                }
+                addProgressLog(log);
+                addToast('success', 'Habit selesai! 🎉');
+            }
+            await loadData(); // Refresh data
+        } catch (error) {
+            console.error('Error toggling habit:', error);
+            addToast('error', 'Gagal mengubah status habit');
         }
     };
 
-    const toggleHabit = (habitId: string) => {
-        const isCompleted = isHabitCompletedForDate(habitId, today);
-
-        if (isCompleted) {
-            removeProgressLog(habitId, today);
-            addToast('info', 'Habit dibatalkan');
-        } else {
-            const log: ProgressLog = {
-                id: generateId(),
-                habitId,
-                userId: user.email || 'local',
-                completedAt: new Date(),
-                date: today,
-            };
-            addProgressLog(log);
-            addToast('success', 'Habit selesai! 🎉');
-        }
-
-        loadData(); // Refresh data
-    };
-
-    const completedToday = habits.filter(h =>
-        isHabitCompletedForDate(h.id, today)
-    ).length;
+    const completedToday = habits.filter(h => isHabitCompleted(h.id)).length;
 
     const completionPercentage = habits.length > 0
         ? Math.round((completedToday / habits.length) * 100)
         : 0;
+
 
     return (
         <div className={styles.dashboard}>
@@ -168,7 +222,7 @@ export default function DashboardContent({ user }: DashboardContentProps) {
                     ) : (
                         <div className={styles.habitsList}>
                             {habits.map(habit => {
-                                const isCompleted = isHabitCompletedForDate(habit.id, today);
+                                const isCompleted = isHabitCompleted(habit.id);
                                 return (
                                     <div
                                         key={habit.id}
