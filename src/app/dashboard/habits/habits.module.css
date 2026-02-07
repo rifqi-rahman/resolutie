@@ -1,0 +1,224 @@
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.layout {
+    min-height: 100vh;
+}
+
+.mainContainer {
+    display: flex;
+    padding-top: 70px;
+}
+
+.content {
+    flex: 1;
+    margin-left: 260px;
+    padding: var(--space-xl);
+    min-height: calc(100vh - 70px);
+    transition: margin-left 0.3s ease;
+}
+
+.contentExpanded {
+    margin-left: 0;
+}
+
+.page {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-xl);
+    gap: var(--space-lg);
+}
+
+.header h1 {
+    margin-bottom: var(--space-xs);
+}
+
+.header p {
+    color: var(--text-muted);
+}
+
+/* Progress Card */
+.progressCard {
+    margin-bottom: var(--space-xl);
+}
+
+.progressInfo {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--space-sm);
+}
+
+.progressLabel {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 0.05em;
+}
+
+.progressValue {
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+/* Empty State */
+.emptyState {
+    text-align: center;
+    padding: var(--space-3xl);
+    max-width: 500px;
+    margin: var(--space-xl) auto;
+}
+
+.emptyIcon {
+    font-size: 5rem;
+    margin-bottom: var(--space-lg);
+}
+
+.emptyState h2 {
+    margin-bottom: var(--space-md);
+}
+
+.emptyState p {
+    color: var(--text-muted);
+}
+
+/* Habits Container */
+.habitsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+}
+
+.labelGroup {
+    margin-bottom: var(--space-md);
+}
+
+.labelTitle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.labelCount {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.habitsList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.habitItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    transition: all 0.2s ease;
+}
+
+.habitItem:hover {
+    background: var(--bg-secondary);
+}
+
+.habitItem.completed {
+    background: var(--success-pale);
+}
+
+.habitItem.completed .habitTitle {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.habitMain {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    flex: 1;
+}
+
+.habitInfo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.habitTitle {
+    font-weight: 600;
+}
+
+.linkedGoal {
+    font-size: 0.75rem;
+    color: var(--primary);
+}
+
+.deleteBtn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: var(--space-sm);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.habitItem:hover .deleteBtn {
+    opacity: 0.5;
+}
+
+.deleteBtn:hover {
+    opacity: 1 !important;
+    color: var(--danger);
+}
+
+/* Frequency Options */
+.frequencyOptions {
+    display: flex;
+    gap: var(--space-md);
+}
+
+.radioOption {
+    flex: 1;
+    padding: var(--space-md);
+    text-align: center;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.radioOption:hover {
+    background: var(--bg-secondary);
+}
+
+.radioOption.selected {
+    background: var(--primary-pale);
+    border-color: var(--primary);
+}
+
+.radioOption input {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .content {
+        margin-left: 0;
+        padding: var(--space-md);
+    }
+
+    .header {
+        flex-direction: column;
+    }
+}

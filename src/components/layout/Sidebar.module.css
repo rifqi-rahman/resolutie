@@ -1,0 +1,111 @@
+.sidebar {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    width: 260px;
+    height: calc(100vh - 70px);
+    background: var(--bg);
+    border-right: 3px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+    z-index: 90;
+}
+
+.closed {
+    transform: translateX(-100%);
+}
+
+.open {
+    transform: translateX(0);
+}
+
+.nav {
+    flex: 1;
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.navItem {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    color: var(--text);
+    text-decoration: none;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.navItem:hover {
+    background: var(--bg-secondary);
+    border-color: var(--border);
+    transform: translateX(4px);
+}
+
+.navItem.active {
+    background: var(--primary-pale);
+    border-color: var(--border);
+    box-shadow: 4px 4px 0 var(--shadow);
+    font-weight: 700;
+    color: var(--primary-dark);
+}
+
+.icon {
+    font-size: 1.25rem;
+    width: 28px;
+    text-align: center;
+}
+
+.label {
+    font-size: 0.95rem;
+}
+
+.footer {
+    padding: var(--space-lg);
+    border-top: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.version {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.github {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 0.875rem;
+    color: var(--text);
+    text-decoration: none;
+    padding: var(--space-sm);
+    border: 2px solid var(--border);
+    text-align: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.github:hover {
+    background: var(--warning-pale);
+    transform: translate(-2px, -2px);
+    box-shadow: 2px 2px 0 var(--shadow);
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        max-width: 300px;
+        box-shadow: 4px 0 0 var(--shadow);
+    }
+
+    .closed {
+        transform: translateX(-100%);
+    }
+}

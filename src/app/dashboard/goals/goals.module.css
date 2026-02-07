@@ -1,0 +1,195 @@
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.layout {
+    min-height: 100vh;
+}
+
+.mainContainer {
+    display: flex;
+    padding-top: 70px;
+}
+
+.content {
+    flex: 1;
+    margin-left: 260px;
+    padding: var(--space-xl);
+    min-height: calc(100vh - 70px);
+    transition: margin-left 0.3s ease;
+}
+
+.contentExpanded {
+    margin-left: 0;
+}
+
+.page {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-xl);
+    gap: var(--space-lg);
+}
+
+.header h1 {
+    margin-bottom: var(--space-xs);
+}
+
+.header p {
+    color: var(--text-muted);
+}
+
+/* Filters */
+.filters {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
+    flex-wrap: wrap;
+}
+
+/* Empty State */
+.emptyState {
+    text-align: center;
+    padding: var(--space-3xl);
+    max-width: 500px;
+    margin: var(--space-xl) auto;
+}
+
+.emptyIcon {
+    font-size: 5rem;
+    margin-bottom: var(--space-lg);
+}
+
+/* Goals List */
+.goalsList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.goalCard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.goalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.goalBadges {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.deleteBtn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: var(--space-xs);
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.deleteBtn:hover {
+    opacity: 1;
+    color: var(--danger);
+}
+
+/* SMART Grid */
+.smartGrid {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.smartItem {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-secondary);
+    border-left: 4px solid var(--primary);
+}
+
+.smartLabel {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary);
+    color: white;
+    font-weight: 700;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.smartText {
+    flex: 1;
+    font-size: 0.95rem;
+}
+
+.daysRemaining {
+    margin-left: var(--space-sm);
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.daysRemaining.urgent {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.goalActions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    border-top: 2px solid var(--border);
+    padding-top: var(--space-md);
+}
+
+/* Form */
+.smartFormGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+}
+
+.smartBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: var(--primary);
+    color: white;
+    font-weight: 700;
+    font-size: 0.75rem;
+    margin-right: var(--space-xs);
+}
+
+@media (max-width: 768px) {
+    .content {
+        margin-left: 0;
+        padding: var(--space-md);
+    }
+
+    .header {
+        flex-direction: column;
+    }
+
+    .smartFormGrid {
+        grid-template-columns: 1fr;
+    }
+}

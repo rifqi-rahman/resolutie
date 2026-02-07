@@ -1,0 +1,101 @@
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: var(--bg);
+    border-bottom: 3px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-lg);
+    z-index: 100;
+}
+
+.left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.menuBtn {
+    padding: var(--space-sm);
+}
+
+.brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.themeBtn {
+    font-size: 1.25rem;
+    padding: var(--space-sm);
+}
+
+.userMenu {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 0;
+    border: 2px solid var(--border);
+    object-fit: cover;
+}
+
+.avatarPlaceholder {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary);
+    color: white;
+    font-weight: 700;
+    border: 2px solid var(--border);
+}
+
+.userInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.userName {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.userEmail {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.logoutBtn {
+    font-size: 0.875rem;
+    padding: var(--space-xs) var(--space-sm);
+    color: var(--danger);
+}
+
+@media (max-width: 768px) {
+    .userInfo {
+        display: none;
+    }
+
+    .userMenu {
+        padding: var(--space-xs);
+    }
+}

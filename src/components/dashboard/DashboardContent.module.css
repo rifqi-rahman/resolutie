@@ -1,0 +1,237 @@
+.dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header {
+    margin-bottom: var(--space-xl);
+}
+
+.header h1 {
+    margin-bottom: var(--space-xs);
+}
+
+.date {
+    color: var(--text-muted);
+}
+
+/* Stats Grid */
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.statCard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.streakCard {
+    background: linear-gradient(135deg, var(--orange-pale) 0%, var(--danger-pale) 100%);
+}
+
+.statIcon {
+    font-size: 2rem;
+}
+
+.statContent {
+    display: flex;
+    flex-direction: column;
+}
+
+.statValue {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.statLabel {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.streakMessage {
+    font-size: 0.875rem;
+    margin-top: var(--space-sm);
+}
+
+/* Main Grid */
+.mainGrid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-xl);
+}
+
+/* Habits Section */
+.habitsSection {
+    display: flex;
+    flex-direction: column;
+}
+
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+}
+
+.sectionHeader h2 {
+    margin: 0;
+}
+
+.habitsList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.habitItem {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.habitItem:hover {
+    background: var(--bg-secondary);
+}
+
+.habitItem.completed {
+    background: var(--success-pale);
+}
+
+.habitItem.completed .habitTitle {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.habitInfo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.habitTitle {
+    font-weight: 600;
+}
+
+.habitLabel {
+    background: var(--primary-pale);
+    color: var(--primary-dark);
+    width: fit-content;
+}
+
+/* Empty States */
+.emptyState {
+    text-align: center;
+    padding: var(--space-2xl);
+}
+
+.emptyIcon {
+    font-size: 4rem;
+    margin-bottom: var(--space-md);
+}
+
+.emptyState h3 {
+    margin-bottom: var(--space-sm);
+}
+
+.emptyState p {
+    color: var(--text-muted);
+    margin-bottom: var(--space-lg);
+}
+
+.emptyText {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* Sidebar */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+/* Quick Actions */
+.quickActions h3 {
+    margin-bottom: var(--space-md);
+}
+
+.actionButtons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.actionButtons a {
+    text-align: center;
+}
+
+/* Goals Section */
+.goalsSection h3 {
+    margin-bottom: var(--space-md);
+}
+
+.goalsList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.goalItem {
+    padding: var(--space-md);
+}
+
+.goalItem h4 {
+    font-size: 1rem;
+    margin-bottom: var(--space-xs);
+}
+
+.goalDeadline {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+/* Record Card */
+.recordCard {
+    text-align: center;
+    background: var(--warning-pale);
+}
+
+.recordCard h3 {
+    margin-bottom: var(--space-md);
+}
+
+.recordValue {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .statsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .mainGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        order: -1;
+    }
+}
+
+@media (max-width: 640px) {
+    .statsGrid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,41 @@
+.loadingContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: var(--space-lg);
+}
+
+.dashboardLayout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.mainContainer {
+    display: flex;
+    flex: 1;
+    padding-top: 70px;
+    /* Navbar height */
+}
+
+.content {
+    flex: 1;
+    margin-left: 260px;
+    /* Sidebar width */
+    padding: var(--space-xl);
+    transition: margin-left 0.3s ease;
+    min-height: calc(100vh - 70px);
+}
+
+.contentExpanded {
+    margin-left: 0;
+}
+
+@media (max-width: 768px) {
+    .content {
+        margin-left: 0;
+        padding: var(--space-md);
+    }
+}

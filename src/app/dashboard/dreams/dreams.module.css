@@ -1,0 +1,145 @@
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.layout {
+    min-height: 100vh;
+}
+
+.mainContainer {
+    display: flex;
+    padding-top: 70px;
+}
+
+.content {
+    flex: 1;
+    margin-left: 260px;
+    padding: var(--space-xl);
+    min-height: calc(100vh - 70px);
+    transition: margin-left 0.3s ease;
+}
+
+.contentExpanded {
+    margin-left: 0;
+}
+
+.page {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-xl);
+    gap: var(--space-lg);
+}
+
+.header h1 {
+    margin-bottom: var(--space-xs);
+}
+
+.header p {
+    color: var(--text-muted);
+}
+
+/* Empty State */
+.emptyState {
+    text-align: center;
+    padding: var(--space-3xl);
+    max-width: 500px;
+    margin: var(--space-xl) auto;
+}
+
+.emptyIcon {
+    font-size: 5rem;
+    margin-bottom: var(--space-lg);
+}
+
+.emptyState h2 {
+    margin-bottom: var(--space-md);
+}
+
+.emptyState p {
+    color: var(--text-muted);
+}
+
+/* Dreams Grid */
+.dreamsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-lg);
+}
+
+.dreamCard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+}
+
+.dreamIcon {
+    font-size: 2rem;
+}
+
+.deleteBtn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: var(--space-xs);
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.deleteBtn:hover {
+    opacity: 1;
+    color: var(--danger);
+}
+
+.dreamCard h3 {
+    margin-bottom: var(--space-sm);
+}
+
+.dreamCard p {
+    color: var(--text-muted);
+    flex: 1;
+    margin-bottom: var(--space-md);
+}
+
+.cardFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 2px solid var(--border);
+    padding-top: var(--space-md);
+}
+
+.date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+    .content {
+        margin-left: 0;
+        padding: var(--space-md);
+    }
+
+    .header {
+        flex-direction: column;
+    }
+
+    .dreamsGrid {
+        grid-template-columns: 1fr;
+    }
+}
