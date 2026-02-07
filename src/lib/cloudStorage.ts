@@ -36,18 +36,24 @@ export async function fetchDreamsFromCloud(userId: string): Promise<Dream[]> {
 export async function saveDreamToCloud(dream: Dream): Promise<boolean> {
     if (!supabase || !isSupabaseConfigured()) return false;
 
-    const { error } = await supabase.from('dreams').upsert({
+    const payload = {
         id: dream.id,
         user_id: dream.userId,
         title: dream.title,
         description: dream.description || null,
         created_at: dream.createdAt instanceof Date ? dream.createdAt.toISOString() : dream.createdAt,
-    });
+    };
+
+    console.log('[saveDreamToCloud] Sending payload:', JSON.stringify(payload, null, 2));
+
+    const { data, error } = await supabase.from('dreams').upsert(payload).select();
 
     if (error) {
-        console.error('Error saving dream:', error);
+        console.error('[saveDreamToCloud] Error:', error.message, error.code, error.details, error.hint);
         return false;
     }
+
+    console.log('[saveDreamToCloud] Success! Data:', data);
     return true;
 }
 
