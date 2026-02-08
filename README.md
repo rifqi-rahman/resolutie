@@ -47,7 +47,7 @@
 
 1. Clone repository
 ```bash
-git clone https://github.com/rifqirahman/resolutie.git
+git clone https://github.com/rifqi-rahman/resolutie.git
 cd resolutie
 ```
 
@@ -108,4 +108,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-Made with ❤️ by [Rifqi Rahman](https://github.com/rifqirahman)
+Made with ❤️ by [Rifqi Rahman](https://github.com/rifqi-rahman)
