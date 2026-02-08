@@ -219,7 +219,7 @@ export default function TodosPage() {
         <div className={dashboardStyles.dashboardLayout}>
             <Navbar user={session.user} onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
             <div className={dashboardStyles.mainContainer}>
-                <Sidebar isOpen={sidebarOpen} />
+                <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                 <main className={`${dashboardStyles.content} ${sidebarOpen ? '' : dashboardStyles.contentExpanded}`}>
                     <div className={styles.todosPage}>
                         {/* Header */}

@@ -39,7 +39,7 @@ export default function DashboardPage() {
                 onMenuClick={() => setSidebarOpen(!sidebarOpen)}
             />
             <div className={styles.mainContainer}>
-                <Sidebar isOpen={sidebarOpen} />
+                <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                 <main className={`${styles.content} ${sidebarOpen ? '' : styles.contentExpanded}`}>
                     <DashboardContent user={session.user} />
                 </main>

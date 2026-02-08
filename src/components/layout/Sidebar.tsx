@@ -6,6 +6,7 @@ import styles from './Sidebar.module.css';
 
 interface SidebarProps {
     isOpen: boolean;
+    onClose?: () => void;
 }
 
 const navItems = [
@@ -18,40 +19,52 @@ const navItems = [
     { href: '/dashboard/settings', icon: '⚙️', label: 'Settings' },
 ];
 
-export default function Sidebar({ isOpen }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const pathname = usePathname();
 
     return (
-        <aside className={`${styles.sidebar} ${isOpen ? styles.open : styles.closed}`}>
-            <nav className={styles.nav}>
-                {navItems.map((item) => {
-                    const isActive = pathname === item.href ||
-                        (item.href !== '/dashboard' && pathname.startsWith(item.href));
+        <>
+            {/* Overlay - click to close sidebar */}
+            {isOpen && (
+                <div
+                    className={styles.overlay}
+                    onClick={onClose}
+                    aria-hidden="true"
+                />
+            )}
 
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`${styles.navItem} ${isActive ? styles.active : ''}`}
-                        >
-                            <span className={styles.icon}>{item.icon}</span>
-                            <span className={styles.label}>{item.label}</span>
-                        </Link>
-                    );
-                })}
-            </nav>
+            <aside className={`${styles.sidebar} ${isOpen ? styles.open : styles.closed}`}>
+                <nav className={styles.nav}>
+                    {navItems.map((item) => {
+                        const isActive = pathname === item.href ||
+                            (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
-            <div className={styles.footer}>
-                <div className={styles.version}>v1.0.0</div>
-                <a
-                    href="https://github.com/rifqirahman/resolutie"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.github}
-                >
-                    ⭐ Star on GitHub
-                </a>
-            </div>
-        </aside>
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className={`${styles.navItem} ${isActive ? styles.active : ''}`}
+                                onClick={onClose} // Close sidebar on mobile when navigating
+                            >
+                                <span className={styles.icon}>{item.icon}</span>
+                                <span className={styles.label}>{item.label}</span>
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                <div className={styles.footer}>
+                    <div className={styles.version}>v1.0.0</div>
+                    <a
+                        href="https://github.com/rifqirahman/resolutie"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.github}
+                    >
+                        ⭐ Star on GitHub
+                    </a>
+                </div>
+            </aside>
+        </>
     );
 }

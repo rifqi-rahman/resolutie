@@ -6,17 +6,21 @@ import {
     getStoredGoals,
     getStoredDreams,
     getStoredProgressLogs,
+    getStoredTodos,
     isHabitCompletedForDate,
     addProgressLog,
-    removeProgressLog
+    removeProgressLog,
+    updateStoredTodo
 } from '@/lib/storage';
 import {
     fetchHabitsFromCloud,
     fetchGoalsFromCloud,
     fetchDreamsFromCloud,
     fetchProgressLogsFromCloud,
+    fetchTodosFromCloud,
     saveProgressLogToCloud,
-    deleteProgressLogFromCloud
+    deleteProgressLogFromCloud,
+    saveTodoToCloud
 } from '@/lib/cloudStorage';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import {
@@ -27,7 +31,7 @@ import {
     generateId
 } from '@/lib/utils';
 import { useToast } from '@/components/providers';
-import { Habit, Goal, Dream, ProgressLog } from '@/types';
+import { Habit, Goal, Dream, ProgressLog, Todo } from '@/types';
 import styles from './DashboardContent.module.css';
 
 interface DashboardContentProps {
@@ -43,8 +47,8 @@ export default function DashboardContent({ user }: DashboardContentProps) {
     const [goals, setGoals] = useState<Goal[]>([]);
     const [dreams, setDreams] = useState<Dream[]>([]);
     const [progressLogs, setProgressLogs] = useState<ProgressLog[]>([]);
+    const [todos, setTodos] = useState<Todo[]>([]);
     const [currentStreak, setCurrentStreak] = useState(0);
-    const [longestStreak, setLongestStreak] = useState(0);
     const today = getToday();
 
     // Use email as userId for consistent identification across devices
@@ -57,34 +61,36 @@ export default function DashboardContent({ user }: DashboardContentProps) {
             let storedGoals: Goal[];
             let storedDreams: Dream[];
             let storedLogs: ProgressLog[];
+            let storedTodos: Todo[];
 
             if (useCloud) {
                 console.log('[Dashboard] Loading from cloud for user:', userId);
-                [storedHabits, storedGoals, storedDreams, storedLogs] = await Promise.all([
+                [storedHabits, storedGoals, storedDreams, storedLogs, storedTodos] = await Promise.all([
                     fetchHabitsFromCloud(userId),
                     fetchGoalsFromCloud(userId),
                     fetchDreamsFromCloud(userId),
-                    fetchProgressLogsFromCloud(userId)
+                    fetchProgressLogsFromCloud(userId),
+                    fetchTodosFromCloud(userId)
                 ]);
-                console.log('[Dashboard] Loaded:', storedHabits.length, 'habits,', storedGoals.length, 'goals,', storedDreams.length, 'dreams');
             } else {
                 storedHabits = getStoredHabits();
                 storedGoals = getStoredGoals();
                 storedDreams = getStoredDreams();
                 storedLogs = getStoredProgressLogs();
+                storedTodos = getStoredTodos();
             }
 
             setHabits(storedHabits);
             setGoals(storedGoals);
             setDreams(storedDreams);
             setProgressLogs(storedLogs);
+            setTodos(storedTodos);
 
             // Calculate streak
             if (storedHabits.length > 0) {
                 const habitIds = storedHabits.map(h => h.id);
                 const streak = calculateStreak(storedLogs, habitIds);
                 setCurrentStreak(streak.currentStreak);
-                setLongestStreak(streak.longestStreak);
             }
         } catch (error) {
             console.error('Error loading dashboard data:', error);
@@ -93,6 +99,7 @@ export default function DashboardContent({ user }: DashboardContentProps) {
             setGoals(getStoredGoals());
             setDreams(getStoredDreams());
             setProgressLogs(getStoredProgressLogs());
+            setTodos(getStoredTodos());
         }
     }, [useCloud, userId]);
 
@@ -138,12 +145,33 @@ export default function DashboardContent({ user }: DashboardContentProps) {
         }
     };
 
-    const completedToday = habits.filter(h => isHabitCompleted(h.id)).length;
+    const toggleTodo = async (todo: Todo) => {
+        try {
+            const updated: Todo = {
+                ...todo,
+                completed: !todo.completed,
+                completedAt: !todo.completed ? new Date() : undefined,
+            };
 
+            if (useCloud) {
+                await saveTodoToCloud(updated);
+            }
+            updateStoredTodo(todo.id, updated);
+            await loadData();
+            addToast('success', updated.completed ? 'To-Do selesai! 🎉' : 'To-Do dibatalkan');
+        } catch (error) {
+            console.error('Error toggling todo:', error);
+            addToast('error', 'Gagal mengubah status to-do');
+        }
+    };
+
+    const completedToday = habits.filter(h => isHabitCompleted(h.id)).length;
     const completionPercentage = habits.length > 0
         ? Math.round((completedToday / habits.length) * 100)
         : 0;
 
+    const pendingTodos = todos.filter(t => !t.completed);
+    const todayTodos = pendingTodos.slice(0, 5); // Show max 5 pending todos
 
     return (
         <div className={styles.dashboard}>
@@ -155,7 +183,7 @@ export default function DashboardContent({ user }: DashboardContentProps) {
                 </div>
             </header>
 
-            {/* Stats Grid */}
+            {/* Stats Grid - 2x2 on mobile */}
             <div className={styles.statsGrid}>
                 <div className={`neo-card ${styles.statCard} ${styles.streakCard}`}>
                     <div className={styles.statIcon}>🔥</div>
@@ -170,7 +198,7 @@ export default function DashboardContent({ user }: DashboardContentProps) {
                     <div className={styles.statIcon}>✅</div>
                     <div className={styles.statContent}>
                         <span className={styles.statValue}>{completedToday}/{habits.length}</span>
-                        <span className={styles.statLabel}>Habits Hari Ini</span>
+                        <span className={styles.statLabel}>Habits</span>
                     </div>
                     <div className="neo-progress" style={{ marginTop: 'var(--space-sm)' }}>
                         <div
@@ -186,74 +214,125 @@ export default function DashboardContent({ user }: DashboardContentProps) {
                     <div className={styles.statIcon}>🎯</div>
                     <div className={styles.statContent}>
                         <span className={styles.statValue}>{goals.filter(g => g.status === 'active').length}</span>
-                        <span className={styles.statLabel}>Goals Aktif</span>
+                        <span className={styles.statLabel}>Goals</span>
                     </div>
                 </div>
 
                 <div className={`neo-card ${styles.statCard}`}>
-                    <div className={styles.statIcon}>💭</div>
+                    <div className={styles.statIcon}>📋</div>
                     <div className={styles.statContent}>
-                        <span className={styles.statValue}>{dreams.length}</span>
-                        <span className={styles.statLabel}>Dreams</span>
+                        <span className={styles.statValue}>{pendingTodos.length}</span>
+                        <span className={styles.statLabel}>To-Do</span>
                     </div>
                 </div>
             </div>
 
             {/* Main Content */}
             <div className={styles.mainGrid}>
-                {/* Today's Habits */}
-                <section className={styles.habitsSection}>
-                    <div className={styles.sectionHeader}>
-                        <h2>Habits Hari Ini</h2>
-                        <a href="/dashboard/habits" className="neo-btn neo-btn-sm neo-btn-secondary">
-                            Lihat Semua
-                        </a>
-                    </div>
-
-                    {habits.length === 0 ? (
-                        <div className={`neo-card ${styles.emptyState}`}>
-                            <div className={styles.emptyIcon}>📋</div>
-                            <h3>Belum ada habits</h3>
-                            <p>Mulai dengan menambahkan habits harian.</p>
-                            <a href="/dashboard/habits" className="neo-btn neo-btn-primary mt-md">
-                                Tambah Habit
+                {/* Main Column - To-Do + Habits */}
+                <div className={styles.mainColumn}>
+                    {/* Today's To-Do */}
+                    <section className={styles.todosSection}>
+                        <div className={styles.sectionHeader}>
+                            <h2>📋 To-Do Hari Ini</h2>
+                            <a href="/dashboard/todos" className="neo-btn neo-btn-sm neo-btn-secondary">
+                                Lihat Semua
                             </a>
                         </div>
-                    ) : (
-                        <div className={styles.habitsList}>
-                            {habits.map(habit => {
-                                const isCompleted = isHabitCompleted(habit.id);
-                                return (
+
+                        {todayTodos.length === 0 ? (
+                            <div className={`neo-card ${styles.emptyState}`}>
+                                <div className={styles.emptyIcon}>✨</div>
+                                <h3>Tidak ada to-do pending</h3>
+                                <p>Semua tugas selesai atau belum ada to-do.</p>
+                                <a href="/dashboard/todos" className="neo-btn neo-btn-primary mt-md">
+                                    Tambah To-Do
+                                </a>
+                            </div>
+                        ) : (
+                            <div className={styles.todosList}>
+                                {todayTodos.map(todo => (
                                     <div
-                                        key={habit.id}
-                                        className={`neo-card-flat ${styles.habitItem} ${isCompleted ? styles.completed : ''}`}
-                                        onClick={() => toggleHabit(habit.id)}
+                                        key={todo.id}
+                                        className={`neo-card-flat ${styles.todoItem}`}
+                                        onClick={() => toggleTodo(todo)}
                                     >
                                         <label className="neo-checkbox">
                                             <input
                                                 type="checkbox"
-                                                checked={isCompleted}
+                                                checked={todo.completed}
                                                 onChange={() => { }}
                                             />
                                         </label>
-                                        <div className={styles.habitInfo}>
-                                            <span className={styles.habitTitle}>{habit.title}</span>
-                                            <span className={`neo-badge ${styles.habitLabel}`}>{habit.label}</span>
+                                        <div className={styles.todoInfo}>
+                                            <span className={styles.todoTitle}>{todo.title}</span>
+                                            <span className={`neo-badge ${styles.priorityBadge} ${styles[todo.priority]}`}>
+                                                {todo.priority === 'high' ? '🔴' : todo.priority === 'medium' ? '🟡' : '🟢'} {todo.priority}
+                                            </span>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </section>
+                                ))}
+                            </div>
+                        )}
+                    </section>
 
-                {/* Quick Actions & Goals */}
+                    {/* Today's Habits */}
+                    <section className={styles.habitsSection}>
+                        <div className={styles.sectionHeader}>
+                            <h2>✅ Habits Hari Ini</h2>
+                            <a href="/dashboard/habits" className="neo-btn neo-btn-sm neo-btn-secondary">
+                                Lihat Semua
+                            </a>
+                        </div>
+
+                        {habits.length === 0 ? (
+                            <div className={`neo-card ${styles.emptyState}`}>
+                                <div className={styles.emptyIcon}>📋</div>
+                                <h3>Belum ada habits</h3>
+                                <p>Mulai dengan menambahkan habits harian.</p>
+                                <a href="/dashboard/habits" className="neo-btn neo-btn-primary mt-md">
+                                    Tambah Habit
+                                </a>
+                            </div>
+                        ) : (
+                            <div className={styles.habitsList}>
+                                {habits.map(habit => {
+                                    const isCompleted = isHabitCompleted(habit.id);
+                                    return (
+                                        <div
+                                            key={habit.id}
+                                            className={`neo-card-flat ${styles.habitItem} ${isCompleted ? styles.completed : ''}`}
+                                            onClick={() => toggleHabit(habit.id)}
+                                        >
+                                            <label className="neo-checkbox">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isCompleted}
+                                                    onChange={() => { }}
+                                                />
+                                            </label>
+                                            <div className={styles.habitInfo}>
+                                                <span className={styles.habitTitle}>{habit.title}</span>
+                                                <span className={`neo-badge ${styles.habitLabel}`}>{habit.label}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </section>
+                </div>
+
+                {/* Sidebar - Quick Actions & Goals */}
                 <aside className={styles.sidebar}>
                     {/* Quick Actions */}
                     <section className={styles.quickActions}>
                         <h3>Quick Actions</h3>
                         <div className={styles.actionButtons}>
-                            <a href="/dashboard/dreams" className="neo-btn neo-btn-primary">
+                            <a href="/dashboard/todos" className="neo-btn neo-btn-primary">
+                                📋 Tambah To-Do
+                            </a>
+                            <a href="/dashboard/dreams" className="neo-btn neo-btn-secondary">
                                 ✨ Tambah Dream
                             </a>
                             <a href="/dashboard/goals" className="neo-btn neo-btn-secondary">
@@ -282,12 +361,6 @@ export default function DashboardContent({ user }: DashboardContentProps) {
                                 ))}
                             </div>
                         )}
-                    </section>
-
-                    {/* Longest Streak */}
-                    <section className={`neo-card ${styles.recordCard}`}>
-                        <h3>🏆 Streak Terpanjang</h3>
-                        <div className={styles.recordValue}>{longestStreak} hari</div>
                     </section>
                 </aside>
             </div>

@@ -215,7 +215,7 @@ export default function HabitsPage() {
         <div className={styles.layout}>
             <Navbar user={session.user} onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
             <div className={styles.mainContainer}>
-                <Sidebar isOpen={sidebarOpen} />
+                <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                 <main className={`${styles.content} ${sidebarOpen ? '' : styles.contentExpanded}`}>
                     <div className={styles.page}>
                         {/* Header */}
