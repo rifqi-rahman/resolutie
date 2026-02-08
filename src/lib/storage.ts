@@ -3,7 +3,7 @@
 // Provides offline-first data persistence
 // ============================================
 
-import { Dream, Goal, Habit, ProgressLog, User } from '@/types';
+import { Dream, Goal, Habit, ProgressLog, User, Todo } from '@/types';
 
 const STORAGE_KEYS = {
     USER: 'resolutie_user',
@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
     GOALS: 'resolutie_goals',
     HABITS: 'resolutie_habits',
     PROGRESS_LOGS: 'resolutie_progress_logs',
+    TODOS: 'resolutie_todos',
     SETTINGS: 'resolutie_settings',
     THEME: 'resolutie_theme',
 } as const;
@@ -190,6 +191,48 @@ export function isHabitCompletedForDate(habitId: string, date: string): boolean 
     return getStoredProgressLogs().some(
         log => log.habitId === habitId && log.date === date
     );
+}
+
+// ============================================
+// Todos Storage
+// ============================================
+
+export function getStoredTodos(): Todo[] {
+    return getItem<Todo[]>(STORAGE_KEYS.TODOS, []);
+}
+
+export function setStoredTodos(todos: Todo[]): void {
+    setItem(STORAGE_KEYS.TODOS, todos);
+}
+
+export function addStoredTodo(todo: Todo): void {
+    const todos = getStoredTodos();
+    todos.push(todo);
+    setStoredTodos(todos);
+}
+
+export function updateStoredTodo(id: string, updates: Partial<Todo>): void {
+    const todos = getStoredTodos();
+    const index = todos.findIndex(t => t.id === id);
+    if (index !== -1) {
+        todos[index] = { ...todos[index], ...updates };
+        setStoredTodos(todos);
+    }
+}
+
+export function deleteStoredTodo(id: string): void {
+    const todos = getStoredTodos().filter(t => t.id !== id);
+    setStoredTodos(todos);
+}
+
+export function toggleStoredTodoComplete(id: string): void {
+    const todos = getStoredTodos();
+    const index = todos.findIndex(t => t.id === id);
+    if (index !== -1) {
+        todos[index].completed = !todos[index].completed;
+        todos[index].completedAt = todos[index].completed ? new Date() : undefined;
+        setStoredTodos(todos);
+    }
 }
 
 // ============================================

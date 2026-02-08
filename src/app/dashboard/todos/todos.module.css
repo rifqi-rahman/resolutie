@@ -1,0 +1,199 @@
+.todosPage {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl);
+}
+
+.header h1 {
+    margin: 0;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    margin-top: var(--space-xs);
+}
+
+/* Filter Tabs */
+.filterTabs {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+}
+
+.filterTab {
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--bg);
+    border: var(--border-width) solid var(--border);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filterTab:hover {
+    background: var(--bg-secondary);
+}
+
+.filterTab.active {
+    background: var(--primary);
+    color: white;
+}
+
+/* Form Card */
+.formCard {
+    margin-bottom: var(--space-xl);
+}
+
+.formCard h3 {
+    margin-bottom: var(--space-lg);
+}
+
+.formRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+}
+
+.formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+/* Todos List */
+.todosList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.todoItem {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    transition: all 0.2s ease;
+}
+
+.todoItem:hover {
+    background: var(--bg-secondary);
+}
+
+.todoItem.completed {
+    background: var(--success-pale);
+}
+
+.todoItem.completed .todoTitle {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.todoCheckbox {
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.todoContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.todoHeader {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.todoTitle {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.todoDescription {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.todoDueDate {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.priorityBadge {
+    font-size: 0.75rem;
+}
+
+.priorityBadge.high {
+    background: var(--danger-pale);
+    color: var(--danger);
+}
+
+.priorityBadge.medium {
+    background: var(--warning-pale);
+    color: var(--warning);
+}
+
+.priorityBadge.low {
+    background: var(--success-pale);
+    color: var(--success);
+}
+
+.todoActions {
+    display: flex;
+    gap: var(--space-xs);
+    flex-shrink: 0;
+}
+
+/* Empty State */
+.emptyState {
+    text-align: center;
+    padding: var(--space-2xl);
+}
+
+.emptyIcon {
+    font-size: 4rem;
+    margin-bottom: var(--space-md);
+}
+
+.emptyState h3 {
+    margin-bottom: var(--space-sm);
+}
+
+.emptyState p {
+    color: var(--text-muted);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-md);
+    }
+
+    .filterTabs {
+        flex-wrap: wrap;
+    }
+
+    .formRow {
+        grid-template-columns: 1fr;
+    }
+
+    .todoItem {
+        flex-direction: column;
+    }
+
+    .todoActions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

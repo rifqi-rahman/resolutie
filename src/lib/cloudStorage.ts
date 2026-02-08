@@ -4,7 +4,7 @@
 // ============================================
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Dream, Goal, Habit, ProgressLog } from '@/types';
+import { Dream, Goal, Habit, ProgressLog, Todo } from '@/types';
 
 // ============================================
 // Dreams - Cloud Storage
@@ -327,4 +327,74 @@ export async function syncLocalToCloud(
     }
 
     return { success: true, synced };
+}
+
+// ============================================
+// Todos - Cloud Storage
+// ============================================
+
+export async function fetchTodosFromCloud(userId: string): Promise<Todo[]> {
+    if (!supabase || !isSupabaseConfigured()) return [];
+
+    const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching todos:', error);
+        return [];
+    }
+
+    return data.map(t => ({
+        id: t.id,
+        userId: t.user_id,
+        title: t.title,
+        description: t.description || undefined,
+        priority: t.priority || 'medium',
+        dueDate: t.due_date ? new Date(t.due_date) : undefined,
+        completed: t.completed || false,
+        completedAt: t.completed_at ? new Date(t.completed_at) : undefined,
+        createdAt: new Date(t.created_at),
+    }));
+}
+
+export async function saveTodoToCloud(todo: Todo): Promise<boolean> {
+    if (!supabase || !isSupabaseConfigured()) return false;
+
+    const payload = {
+        id: todo.id,
+        user_id: todo.userId,
+        title: todo.title,
+        description: todo.description || null,
+        priority: todo.priority || 'medium',
+        due_date: todo.dueDate instanceof Date ? todo.dueDate.toISOString().split('T')[0] : todo.dueDate || null,
+        completed: todo.completed || false,
+        completed_at: todo.completedAt instanceof Date ? todo.completedAt.toISOString() : todo.completedAt || null,
+        created_at: todo.createdAt instanceof Date ? todo.createdAt.toISOString() : todo.createdAt,
+    };
+
+    const { error } = await supabase.from('todos').upsert(payload);
+
+    if (error) {
+        console.error('Error saving todo:', error.message, error.code);
+        return false;
+    }
+    return true;
+}
+
+export async function deleteTodoFromCloud(id: string): Promise<boolean> {
+    if (!supabase || !isSupabaseConfigured()) return false;
+
+    const { error } = await supabase
+        .from('todos')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting todo:', error);
+        return false;
+    }
+    return true;
 }

@@ -72,6 +72,20 @@ export interface ProgressLog {
     notes?: string;
 }
 
+export interface Todo {
+    id: string;
+    userId: string;
+    title: string;
+    description?: string;
+    priority: TodoPriority;
+    dueDate?: Date;
+    completed: boolean;
+    completedAt?: Date;
+    createdAt: Date;
+}
+
+export type TodoPriority = 'low' | 'medium' | 'high';
+
 // ============================================
 // Analytics Types
 // ============================================
