@@ -56,7 +56,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <div className={styles.footer}>
                     <div className={styles.version}>v1.0.0</div>
                     <a
-                        href="https://github.com/rifqirahman/resolutie"
+                        href="https://github.com/rifqi-rahman/resolutie"
                         target="_blank"
                         rel="noopener noreferrer"
                         className={styles.github}

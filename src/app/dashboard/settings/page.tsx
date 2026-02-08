@@ -196,14 +196,14 @@ export default function SettingsPage() {
                                 <p><strong>License:</strong> MIT</p>
                                 <p>
                                     <strong>Repository:</strong>{' '}
-                                    <a href="https://github.com/rifqirahman/resolutie" target="_blank" rel="noopener noreferrer">
-                                        github.com/rifqirahman/resolutie
+                                    <a href="https://github.com/rifqi-rahman/resolutie" target="_blank" rel="noopener noreferrer">
+                                        github.com/rifqi-rahman/resolutie
                                     </a>
                                 </p>
                             </div>
                             <div className={styles.aboutButtons}>
                                 <a
-                                    href="https://github.com/rifqirahman/resolutie"
+                                    href="https://github.com/rifqi-rahman/resolutie"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="neo-btn neo-btn-secondary"
@@ -211,7 +211,7 @@ export default function SettingsPage() {
                                     ⭐ Star on GitHub
                                 </a>
                                 <a
-                                    href="https://github.com/rifqirahman/resolutie/issues"
+                                    href="https://github.com/rifqi-rahman/resolutie/issues"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="neo-btn neo-btn-secondary"

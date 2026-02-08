@@ -173,7 +173,7 @@ export default function LandingPage() {
             <p>Goal Setting & Habit Tracker</p>
           </div>
           <div className={styles.footerLinks}>
-            <a href="https://github.com/rifqirahman/resolutie" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/rifqi-rahman/resolutie" target="_blank" rel="noopener noreferrer">
               GitHub
             </a>
             <a href="#features">Features</a>
