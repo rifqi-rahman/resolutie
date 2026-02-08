@@ -84,7 +84,7 @@ npm run dev
 
 Deploy dengan Vercel:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/rifqirahman/resolutie)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/rifqi-rahman/resolutie)
 
 ## 🎨 Design System
 
