@@ -398,3 +398,105 @@ export async function deleteTodoFromCloud(id: string): Promise<boolean> {
     }
     return true;
 }
+
+// ============================================
+// User Tracking - Cloud Storage
+// ============================================
+
+export interface TrackedUser {
+    email: string;
+    name: string | null;
+    image: string | null;
+    first_login: string;
+    last_login: string;
+    login_count: number;
+}
+
+export async function trackUserLogin(user: {
+    email: string;
+    name?: string | null;
+    image?: string | null;
+}): Promise<boolean> {
+    if (!supabase || !isSupabaseConfigured() || !user.email) return false;
+
+    try {
+        // Check if user exists
+        const { data: existingUser } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', user.email)
+            .single();
+
+        if (existingUser) {
+            // Update existing user
+            const { error } = await supabase
+                .from('users')
+                .update({
+                    name: user.name || existingUser.name,
+                    image: user.image || existingUser.image,
+                    last_login: new Date().toISOString(),
+                    login_count: (existingUser.login_count || 0) + 1,
+                })
+                .eq('email', user.email);
+
+            if (error) {
+                console.error('Error updating user:', error);
+                return false;
+            }
+        } else {
+            // Insert new user
+            const { error } = await supabase
+                .from('users')
+                .insert({
+                    email: user.email,
+                    name: user.name || null,
+                    image: user.image || null,
+                    first_login: new Date().toISOString(),
+                    last_login: new Date().toISOString(),
+                    login_count: 1,
+                });
+
+            if (error) {
+                console.error('Error inserting user:', error);
+                return false;
+            }
+        }
+
+        console.log('[trackUserLogin] User tracked:', user.email);
+        return true;
+    } catch (error) {
+        console.error('Error tracking user:', error);
+        return false;
+    }
+}
+
+export async function fetchAllUsers(): Promise<TrackedUser[]> {
+    if (!supabase || !isSupabaseConfigured()) return [];
+
+    const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('last_login', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching users:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
+export async function getUserCount(): Promise<number> {
+    if (!supabase || !isSupabaseConfigured()) return 0;
+
+    const { count, error } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true });
+
+    if (error) {
+        console.error('Error counting users:', error);
+        return 0;
+    }
+
+    return count || 0;
+}

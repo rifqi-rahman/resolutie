@@ -20,7 +20,8 @@ import {
     fetchTodosFromCloud,
     saveProgressLogToCloud,
     deleteProgressLogFromCloud,
-    saveTodoToCloud
+    saveTodoToCloud,
+    trackUserLogin
 } from '@/lib/cloudStorage';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import {
@@ -38,6 +39,7 @@ interface DashboardContentProps {
     user: {
         name?: string | null;
         email?: string | null;
+        image?: string | null;
     };
 }
 
@@ -105,7 +107,15 @@ export default function DashboardContent({ user }: DashboardContentProps) {
 
     useEffect(() => {
         loadData();
-    }, [loadData]);
+        // Track user login when dashboard loads
+        if (useCloud && user.email) {
+            trackUserLogin({
+                email: user.email,
+                name: user.name,
+                image: user.image,
+            });
+        }
+    }, [loadData, useCloud, user]);
 
     const isHabitCompleted = (habitId: string) => {
         if (useCloud) {
