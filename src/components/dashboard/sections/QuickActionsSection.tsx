@@ -1,25 +1,51 @@
 'use client';
 
+import { Droppable, Draggable } from '@hello-pangea/dnd';
 import styles from '../DashboardContent.module.css';
+import { QuickAction } from '@/constants/dashboard';
 
-export default function QuickActionsSection() {
+interface QuickActionsSectionProps {
+    actions: QuickAction[];
+}
+
+export default function QuickActionsSection({ actions }: QuickActionsSectionProps) {
     return (
         <section className={styles.quickActions}>
             <h3>Quick Actions</h3>
-            <div className={styles.actionButtons}>
-                <a href="/dashboard/todos" className="neo-btn neo-btn-primary">
-                    📋 Tambah To-Do
-                </a>
-                <a href="/dashboard/dreams" className="neo-btn neo-btn-secondary">
-                    ✨ Tambah Dream
-                </a>
-                <a href="/dashboard/goals" className="neo-btn neo-btn-secondary">
-                    🎯 Tambah Goal
-                </a>
-                <a href="/dashboard/habits" className="neo-btn neo-btn-secondary">
-                    ✅ Tambah Habit
-                </a>
-            </div>
+            <Droppable droppableId="quickActions">
+                {(provided) => (
+                    <div
+                        className={styles.actionButtons}
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                    >
+                        {actions.map((action, index) => (
+                            <Draggable key={action.id} draggableId={action.id} index={index}>
+                                {(provided, snapshot) => (
+                                    <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        style={{ ...provided.draggableProps.style }}
+                                        className={`${snapshot.isDragging ? styles.isDraggingItem : ''}`}
+                                    >
+                                        <a
+                                            href={action.href}
+                                            className={`neo-btn ${action.variant === 'primary' ? 'neo-btn-primary' : 'neo-btn-secondary'} w-full`}
+                                            onClick={(e) => {
+                                                if (snapshot.isDragging) e.preventDefault();
+                                            }}
+                                        >
+                                            {action.label}
+                                        </a>
+                                    </div>
+                                )}
+                            </Draggable>
+                        ))}
+                        {provided.placeholder}
+                    </div>
+                )}
+            </Droppable>
         </section>
     );
 }

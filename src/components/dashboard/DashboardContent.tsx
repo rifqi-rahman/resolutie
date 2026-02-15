@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import {
     getStoredHabits,
     getStoredGoals,
@@ -35,9 +35,10 @@ import {
 import { useToast } from '@/components/providers';
 import { Habit, Goal, Dream, ProgressLog, Todo } from '@/types';
 import styles from './DashboardContent.module.css';
+import { sortListByOrder, reorderList } from '@/lib/dndUtils';
+import { DEFAULT_QUICK_ACTIONS, QuickAction } from '@/constants/dashboard';
 
 // Importing Sections
-import DraggableSection from './sections/DraggableSection';
 import TodosSection from './sections/TodosSection';
 import HabitsSection from './sections/HabitsSection';
 import QuickActionsSection from './sections/QuickActionsSection';
@@ -51,16 +52,6 @@ interface DashboardContentProps {
     };
 }
 
-interface DashboardLayout {
-    main: string[];
-    sidebar: string[];
-}
-
-const DEFAULT_LAYOUT: DashboardLayout = {
-    main: ['todos', 'habits'],
-    sidebar: ['quickActions', 'goals']
-};
-
 export default function DashboardContent({ user }: DashboardContentProps) {
     const { addToast } = useToast();
     const [habits, setHabits] = useState<Habit[]>([]);
@@ -71,8 +62,12 @@ export default function DashboardContent({ user }: DashboardContentProps) {
     const [currentStreak, setCurrentStreak] = useState(0);
     const today = getToday();
 
-    // Layout State
-    const [layout, setLayout] = useState<DashboardLayout>(DEFAULT_LAYOUT);
+    // Item Order State
+    const [quickActions, setQuickActions] = useState<QuickAction[]>(DEFAULT_QUICK_ACTIONS);
+    const [todosOrder, setTodosOrder] = useState<string[]>([]);
+    const [habitsOrder, setHabitsOrder] = useState<string[]>([]);
+    const [goalsOrder, setGoalsOrder] = useState<string[]>([]);
+
     const [isClient, setIsClient] = useState(false);
 
     // Use email as userId for consistent identification across devices
@@ -81,20 +76,29 @@ export default function DashboardContent({ user }: DashboardContentProps) {
 
     useEffect(() => {
         setIsClient(true);
-        const storedLayout = localStorage.getItem('resolutie_dashboard_layout');
-        if (storedLayout) {
+        // Load stored orders
+        const storedActions = localStorage.getItem('resolutie_qa_order');
+        if (storedActions) {
             try {
-                setLayout(JSON.parse(storedLayout));
+                const order = JSON.parse(storedActions);
+                // Reorder default actions based on stored IDs
+                const orderedActions = sortListByOrder(DEFAULT_QUICK_ACTIONS, order);
+                setQuickActions(orderedActions);
             } catch (e) {
-                console.error('Failed to parse dashboard layout', e);
+                console.error('Failed to parse actions order', e);
             }
         }
-    }, []);
 
-    const saveLayout = (newLayout: DashboardLayout) => {
-        setLayout(newLayout);
-        localStorage.setItem('resolutie_dashboard_layout', JSON.stringify(newLayout));
-    };
+        const storedTodos = localStorage.getItem('resolutie_todos_order');
+        if (storedTodos) setTodosOrder(JSON.parse(storedTodos));
+
+        const storedHabits = localStorage.getItem('resolutie_habits_order');
+        if (storedHabits) setHabitsOrder(JSON.parse(storedHabits));
+
+        const storedGoals = localStorage.getItem('resolutie_goals_order');
+        if (storedGoals) setGoalsOrder(JSON.parse(storedGoals));
+
+    }, []);
 
     const loadData = useCallback(async () => {
         try {
@@ -218,61 +222,37 @@ export default function DashboardContent({ user }: DashboardContentProps) {
         const { source, destination } = result;
 
         if (!destination) return;
+        if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-        // If dropped in the same list and same index, do nothing
-        if (
-            source.droppableId === destination.droppableId &&
-            source.index === destination.index
-        ) {
-            return;
+        // Handle Item Reordering
+        if (source.droppableId === 'quickActions') {
+            const newActions = reorderList(quickActions, source.index, destination.index);
+            setQuickActions(newActions);
+            const orderIds = newActions.map(a => a.id);
+            localStorage.setItem('resolutie_qa_order', JSON.stringify(orderIds));
+        } else if (source.droppableId === 'todos') {
+            // Reorder based on filtered list (only visible) or full list?
+            // Strategy: Reorder the IDs in state
+            const currentFilteredTodos = sortListByOrder(todos.filter(t => !t.completed).slice(0, 5), todosOrder);
+            const newOrder = reorderList(currentFilteredTodos.map(t => t.id), source.index, destination.index);
+
+            // Merge new order with existing order (keep completed/hidden items)
+            const updatedFullOrder = Array.from(new Set([...newOrder, ...todosOrder]));
+            setTodosOrder(updatedFullOrder);
+            localStorage.setItem('resolutie_todos_order', JSON.stringify(updatedFullOrder));
+        } else if (source.droppableId === 'habits') {
+            const currentHabits = sortListByOrder(habits, habitsOrder);
+            const newOrder = reorderList(currentHabits.map(h => h.id), source.index, destination.index);
+            setHabitsOrder(newOrder);
+            localStorage.setItem('resolutie_habits_order', JSON.stringify(newOrder));
+        } else if (source.droppableId === 'goals') {
+            const currentGoals = sortListByOrder(goals.filter(g => g.status === 'active').slice(0, 3), goalsOrder);
+            const newOrder = reorderList(currentGoals.map(g => g.id), source.index, destination.index);
+
+            const updatedFullOrder = Array.from(new Set([...newOrder, ...goalsOrder]));
+            setGoalsOrder(updatedFullOrder);
+            localStorage.setItem('resolutie_goals_order', JSON.stringify(updatedFullOrder));
         }
-
-        const newLayout = { ...layout };
-        const sourceList = source.droppableId === 'main' ? [...newLayout.main] : [...newLayout.sidebar];
-        const destList = destination.droppableId === 'main' ? [...newLayout.main] : [...newLayout.sidebar];
-
-        // Moving within the same list
-        if (source.droppableId === destination.droppableId) {
-            const [removed] = sourceList.splice(source.index, 1);
-            sourceList.splice(destination.index, 0, removed);
-
-            if (source.droppableId === 'main') {
-                newLayout.main = sourceList;
-            } else {
-                newLayout.sidebar = sourceList;
-            }
-        } else {
-            // Moving between lists
-            const [removed] = sourceList.splice(source.index, 1);
-            destList.splice(destination.index, 0, removed);
-
-            if (source.droppableId === 'main') {
-                newLayout.main = sourceList;
-                newLayout.sidebar = destList;
-            } else {
-                newLayout.sidebar = sourceList;
-                newLayout.main = destList;
-            }
-        }
-
-        saveLayout(newLayout);
-    };
-
-    const renderSection = (id: string, index: number) => {
-        return (
-            <DraggableSection key={id} id={id} index={index}>
-                {id === 'todos' && <TodosSection todos={todos} toggleTodo={toggleTodo} />}
-                {id === 'habits' && (
-                    <HabitsSection
-                        habits={habits}
-                        isHabitCompleted={isHabitCompleted}
-                        toggleHabit={toggleHabit}
-                    />
-                )}
-                {id === 'quickActions' && <QuickActionsSection />}
-                {id === 'goals' && <GoalsSection goals={goals} />}
-            </DraggableSection>
-        );
     };
 
     const completedToday = habits.filter(h => isHabitCompleted(h.id)).length;
@@ -340,33 +320,26 @@ export default function DashboardContent({ user }: DashboardContentProps) {
             {/* Main Content - Drag and Drop Context */}
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className={styles.mainGrid}>
-                    {/* Main Column */}
-                    <Droppable droppableId="main">
-                        {(provided) => (
-                            <div
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                                className={styles.mainColumn} // Reusing struct for layout
-                            >
-                                {layout.main.map((id, index) => renderSection(id, index))}
-                                {provided.placeholder}
-                            </div>
-                        )}
-                    </Droppable>
+                    {/* Main Column - To-Do + Habits */}
+                    <div className={styles.mainColumn}>
+                        <TodosSection
+                            todos={todos}
+                            toggleTodo={toggleTodo}
+                            order={todosOrder}
+                        />
+                        <HabitsSection
+                            habits={habits}
+                            isHabitCompleted={isHabitCompleted}
+                            toggleHabit={toggleHabit}
+                            order={habitsOrder}
+                        />
+                    </div>
 
-                    {/* Sidebar Column */}
-                    <Droppable droppableId="sidebar">
-                        {(provided) => (
-                            <div
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                                className={styles.sidebar} // Reusing struct for layout
-                            >
-                                {layout.sidebar.map((id, index) => renderSection(id, index))}
-                                {provided.placeholder}
-                            </div>
-                        )}
-                    </Droppable>
+                    {/* Sidebar Column - Quick Actions + Goals */}
+                    <aside className={styles.sidebar}>
+                        <QuickActionsSection actions={quickActions} />
+                        <GoalsSection goals={goals} order={goalsOrder} />
+                    </aside>
                 </div>
             </DragDropContext>
         </div>
