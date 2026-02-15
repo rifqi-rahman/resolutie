@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
 import {
     getStoredHabits,
     getStoredGoals,
@@ -35,6 +36,13 @@ import { useToast } from '@/components/providers';
 import { Habit, Goal, Dream, ProgressLog, Todo } from '@/types';
 import styles from './DashboardContent.module.css';
 
+// Importing Sections
+import DraggableSection from './sections/DraggableSection';
+import TodosSection from './sections/TodosSection';
+import HabitsSection from './sections/HabitsSection';
+import QuickActionsSection from './sections/QuickActionsSection';
+import GoalsSection from './sections/GoalsSection';
+
 interface DashboardContentProps {
     user: {
         name?: string | null;
@@ -42,6 +50,16 @@ interface DashboardContentProps {
         image?: string | null;
     };
 }
+
+interface DashboardLayout {
+    main: string[];
+    sidebar: string[];
+}
+
+const DEFAULT_LAYOUT: DashboardLayout = {
+    main: ['todos', 'habits'],
+    sidebar: ['quickActions', 'goals']
+};
 
 export default function DashboardContent({ user }: DashboardContentProps) {
     const { addToast } = useToast();
@@ -53,9 +71,30 @@ export default function DashboardContent({ user }: DashboardContentProps) {
     const [currentStreak, setCurrentStreak] = useState(0);
     const today = getToday();
 
+    // Layout State
+    const [layout, setLayout] = useState<DashboardLayout>(DEFAULT_LAYOUT);
+    const [isClient, setIsClient] = useState(false);
+
     // Use email as userId for consistent identification across devices
     const userId = user.email || 'local';
     const useCloud = isSupabaseConfigured() && !!user.email;
+
+    useEffect(() => {
+        setIsClient(true);
+        const storedLayout = localStorage.getItem('resolutie_dashboard_layout');
+        if (storedLayout) {
+            try {
+                setLayout(JSON.parse(storedLayout));
+            } catch (e) {
+                console.error('Failed to parse dashboard layout', e);
+            }
+        }
+    }, []);
+
+    const saveLayout = (newLayout: DashboardLayout) => {
+        setLayout(newLayout);
+        localStorage.setItem('resolutie_dashboard_layout', JSON.stringify(newLayout));
+    };
 
     const loadData = useCallback(async () => {
         try {
@@ -175,13 +214,74 @@ export default function DashboardContent({ user }: DashboardContentProps) {
         }
     };
 
+    const onDragEnd = (result: DropResult) => {
+        const { source, destination } = result;
+
+        if (!destination) return;
+
+        // If dropped in the same list and same index, do nothing
+        if (
+            source.droppableId === destination.droppableId &&
+            source.index === destination.index
+        ) {
+            return;
+        }
+
+        const newLayout = { ...layout };
+        const sourceList = source.droppableId === 'main' ? [...newLayout.main] : [...newLayout.sidebar];
+        const destList = destination.droppableId === 'main' ? [...newLayout.main] : [...newLayout.sidebar];
+
+        // Moving within the same list
+        if (source.droppableId === destination.droppableId) {
+            const [removed] = sourceList.splice(source.index, 1);
+            sourceList.splice(destination.index, 0, removed);
+
+            if (source.droppableId === 'main') {
+                newLayout.main = sourceList;
+            } else {
+                newLayout.sidebar = sourceList;
+            }
+        } else {
+            // Moving between lists
+            const [removed] = sourceList.splice(source.index, 1);
+            destList.splice(destination.index, 0, removed);
+
+            if (source.droppableId === 'main') {
+                newLayout.main = sourceList;
+                newLayout.sidebar = destList;
+            } else {
+                newLayout.sidebar = sourceList;
+                newLayout.main = destList;
+            }
+        }
+
+        saveLayout(newLayout);
+    };
+
+    const renderSection = (id: string, index: number) => {
+        return (
+            <DraggableSection key={id} id={id} index={index}>
+                {id === 'todos' && <TodosSection todos={todos} toggleTodo={toggleTodo} />}
+                {id === 'habits' && (
+                    <HabitsSection
+                        habits={habits}
+                        isHabitCompleted={isHabitCompleted}
+                        toggleHabit={toggleHabit}
+                    />
+                )}
+                {id === 'quickActions' && <QuickActionsSection />}
+                {id === 'goals' && <GoalsSection goals={goals} />}
+            </DraggableSection>
+        );
+    };
+
     const completedToday = habits.filter(h => isHabitCompleted(h.id)).length;
     const completionPercentage = habits.length > 0
         ? Math.round((completedToday / habits.length) * 100)
         : 0;
+    const pendingTodosCount = todos.filter(t => !t.completed).length;
 
-    const pendingTodos = todos.filter(t => !t.completed);
-    const todayTodos = pendingTodos.slice(0, 5); // Show max 5 pending todos
+    if (!isClient) return null; // Avoid hydration mismatch
 
     return (
         <div className={styles.dashboard}>
@@ -193,7 +293,7 @@ export default function DashboardContent({ user }: DashboardContentProps) {
                 </div>
             </header>
 
-            {/* Stats Grid - 2x2 on mobile */}
+            {/* Stats Grid */}
             <div className={styles.statsGrid}>
                 <div className={`neo-card ${styles.statCard} ${styles.streakCard}`}>
                     <div className={styles.statIcon}>🔥</div>
@@ -231,149 +331,44 @@ export default function DashboardContent({ user }: DashboardContentProps) {
                 <div className={`neo-card ${styles.statCard}`}>
                     <div className={styles.statIcon}>📋</div>
                     <div className={styles.statContent}>
-                        <span className={styles.statValue}>{pendingTodos.length}</span>
+                        <span className={styles.statValue}>{pendingTodosCount}</span>
                         <span className={styles.statLabel}>To-Do</span>
                     </div>
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className={styles.mainGrid}>
-                {/* Main Column - To-Do + Habits */}
-                <div className={styles.mainColumn}>
-                    {/* Today's To-Do */}
-                    <section className={styles.todosSection}>
-                        <div className={styles.sectionHeader}>
-                            <h2>📋 To-Do Hari Ini</h2>
-                            <a href="/dashboard/todos" className="neo-btn neo-btn-sm neo-btn-secondary">
-                                Lihat Semua
-                            </a>
-                        </div>
-
-                        {todayTodos.length === 0 ? (
-                            <div className={`neo-card ${styles.emptyState}`}>
-                                <div className={styles.emptyIcon}>✨</div>
-                                <h3>Tidak ada to-do pending</h3>
-                                <p>Semua tugas selesai atau belum ada to-do.</p>
-                                <a href="/dashboard/todos" className="neo-btn neo-btn-primary mt-md">
-                                    Tambah To-Do
-                                </a>
-                            </div>
-                        ) : (
-                            <div className={styles.todosList}>
-                                {todayTodos.map(todo => (
-                                    <div
-                                        key={todo.id}
-                                        className={`neo-card-flat ${styles.todoItem}`}
-                                        onClick={() => toggleTodo(todo)}
-                                    >
-                                        <label className="neo-checkbox">
-                                            <input
-                                                type="checkbox"
-                                                checked={todo.completed}
-                                                onChange={() => { }}
-                                            />
-                                        </label>
-                                        <div className={styles.todoInfo}>
-                                            <span className={styles.todoTitle}>{todo.title}</span>
-                                            <span className={`neo-badge ${styles.priorityBadge} ${styles[todo.priority]}`}>
-                                                {todo.priority === 'high' ? '🔴' : todo.priority === 'medium' ? '🟡' : '🟢'} {todo.priority}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
+            {/* Main Content - Drag and Drop Context */}
+            <DragDropContext onDragEnd={onDragEnd}>
+                <div className={styles.mainGrid}>
+                    {/* Main Column */}
+                    <Droppable droppableId="main">
+                        {(provided) => (
+                            <div
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                className={styles.mainColumn} // Reusing struct for layout
+                            >
+                                {layout.main.map((id, index) => renderSection(id, index))}
+                                {provided.placeholder}
                             </div>
                         )}
-                    </section>
+                    </Droppable>
 
-                    {/* Today's Habits */}
-                    <section className={styles.habitsSection}>
-                        <div className={styles.sectionHeader}>
-                            <h2>✅ Habits Hari Ini</h2>
-                            <a href="/dashboard/habits" className="neo-btn neo-btn-sm neo-btn-secondary">
-                                Lihat Semua
-                            </a>
-                        </div>
-
-                        {habits.length === 0 ? (
-                            <div className={`neo-card ${styles.emptyState}`}>
-                                <div className={styles.emptyIcon}>📋</div>
-                                <h3>Belum ada habits</h3>
-                                <p>Mulai dengan menambahkan habits harian.</p>
-                                <a href="/dashboard/habits" className="neo-btn neo-btn-primary mt-md">
-                                    Tambah Habit
-                                </a>
-                            </div>
-                        ) : (
-                            <div className={styles.habitsList}>
-                                {habits.map(habit => {
-                                    const isCompleted = isHabitCompleted(habit.id);
-                                    return (
-                                        <div
-                                            key={habit.id}
-                                            className={`neo-card-flat ${styles.habitItem} ${isCompleted ? styles.completed : ''}`}
-                                            onClick={() => toggleHabit(habit.id)}
-                                        >
-                                            <label className="neo-checkbox">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isCompleted}
-                                                    onChange={() => { }}
-                                                />
-                                            </label>
-                                            <div className={styles.habitInfo}>
-                                                <span className={styles.habitTitle}>{habit.title}</span>
-                                                <span className={`neo-badge ${styles.habitLabel}`}>{habit.label}</span>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                    {/* Sidebar Column */}
+                    <Droppable droppableId="sidebar">
+                        {(provided) => (
+                            <div
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                className={styles.sidebar} // Reusing struct for layout
+                            >
+                                {layout.sidebar.map((id, index) => renderSection(id, index))}
+                                {provided.placeholder}
                             </div>
                         )}
-                    </section>
+                    </Droppable>
                 </div>
-
-                {/* Sidebar - Quick Actions & Goals */}
-                <aside className={styles.sidebar}>
-                    {/* Quick Actions */}
-                    <section className={styles.quickActions}>
-                        <h3>Quick Actions</h3>
-                        <div className={styles.actionButtons}>
-                            <a href="/dashboard/todos" className="neo-btn neo-btn-primary">
-                                📋 Tambah To-Do
-                            </a>
-                            <a href="/dashboard/dreams" className="neo-btn neo-btn-secondary">
-                                ✨ Tambah Dream
-                            </a>
-                            <a href="/dashboard/goals" className="neo-btn neo-btn-secondary">
-                                🎯 Tambah Goal
-                            </a>
-                            <a href="/dashboard/habits" className="neo-btn neo-btn-secondary">
-                                ✅ Tambah Habit
-                            </a>
-                        </div>
-                    </section>
-
-                    {/* Active Goals */}
-                    <section className={styles.goalsSection}>
-                        <h3>Goals Aktif</h3>
-                        {goals.filter(g => g.status === 'active').length === 0 ? (
-                            <p className={styles.emptyText}>Belum ada goals aktif.</p>
-                        ) : (
-                            <div className={styles.goalsList}>
-                                {goals.filter(g => g.status === 'active').slice(0, 3).map(goal => (
-                                    <div key={goal.id} className={`neo-card-flat ${styles.goalItem}`}>
-                                        <h4>{goal.title}</h4>
-                                        <p className={styles.goalDeadline}>
-                                            Deadline: {new Date(goal.timeBound).toLocaleDateString('id-ID')}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </section>
-                </aside>
-            </div>
+            </DragDropContext>
         </div>
     );
 }

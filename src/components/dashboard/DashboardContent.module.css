@@ -72,6 +72,124 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
+    min-height: 100px;
+    /* Drop zone area */
+}
+
+/* Sidebar */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    min-height: 100px;
+    /* Drop zone area */
+}
+
+/* ... (rest of the file until mobile media query) ... */
+
+/* ========== MOBILE ========== */
+@media (max-width: 640px) {
+    .dashboard {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Header stays first */
+    .header {
+        order: 1;
+        margin-bottom: var(--space-md);
+    }
+
+    .header h1 {
+        font-size: 1.5rem;
+    }
+
+    /* Stats Grid - 2x2 compact */
+    .statsGrid {
+        order: 2;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
+        margin-bottom: var(--space-lg);
+    }
+
+    .statCard {
+        padding: var(--space-sm);
+    }
+
+    .statIcon {
+        font-size: 1.25rem;
+    }
+
+    .statValue {
+        font-size: 1.25rem;
+    }
+
+    .statLabel {
+        font-size: 0.65rem;
+    }
+
+    .streakMessage {
+        display: none;
+    }
+
+    /* Main Grid becomes vertical */
+    .mainGrid {
+        order: 3;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-lg);
+    }
+
+    /* Remove specific ordering as it's now handled by DND state */
+    .sectionHeader h2 {
+        font-size: 1.1rem;
+    }
+
+    .emptyState {
+        padding: var(--space-lg);
+    }
+
+    .emptyIcon {
+        font-size: 2rem;
+    }
+}
+
+/* Draggable Sections */
+.draggableSection {
+    background: var(--bg);
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    position: relative;
+}
+
+.draggableSection.isDragging {
+    border-color: var(--primary);
+    box-shadow: 8px 8px 0 var(--shadow);
+    z-index: 100;
+}
+
+.dragHandle {
+    position: absolute;
+    top: var(--space-md);
+    right: var(--space-md);
+    cursor: grab;
+    padding: var(--space-xs);
+    opacity: 0.3;
+    transition: opacity 0.2s ease;
+    border-radius: var(--radius-sm);
+}
+
+.draggableSection:hover .dragHandle {
+    opacity: 1;
+}
+
+.dragHandle:hover {
+    background: var(--bg-secondary);
+}
+
+.dragHandle:active {
+    cursor: grabbing;
 }
 
 /* Todos Section */
