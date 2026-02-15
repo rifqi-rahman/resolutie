@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import Sidebar from '@/components/layout/Sidebar';
-import { getStoredDreams, addStoredDream, deleteStoredDream } from '@/lib/storage';
+import { getStoredDreams, addStoredDream, deleteStoredDream, updateStoredDream } from '@/lib/storage';
 import { fetchDreamsFromCloud, saveDreamToCloud, deleteDreamFromCloud } from '@/lib/cloudStorage';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { generateId, formatDateDisplay } from '@/lib/utils';
@@ -22,6 +22,7 @@ export default function DreamsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [newDream, setNewDream] = useState({ title: '', description: '' });
+    const [editingDreamId, setEditingDreamId] = useState<string | null>(null);
 
     // Use email as userId for consistent identification across devices
     const userId = session?.user?.email || 'local';
@@ -66,27 +67,43 @@ export default function DreamsPage() {
             return;
         }
 
-        const dream: Dream = {
-            id: generateId(),
-            userId: userId,
-            title: newDream.title,
-            description: newDream.description,
-            createdAt: new Date(),
-        };
-
         try {
-            if (useCloud) {
-                // Save to Supabase
-                const success = await saveDreamToCloud(dream);
-                if (!success) throw new Error('Failed to save to cloud');
+            if (editingDreamId) {
+                // Update existing dream
+                const updates = {
+                    title: newDream.title,
+                    description: newDream.description,
+                };
+
+                if (useCloud) {
+                    const currentDream = dreams.find(d => d.id === editingDreamId);
+                    if (currentDream) {
+                        await saveDreamToCloud({ ...currentDream, ...updates });
+                    }
+                }
+                updateStoredDream(editingDreamId, updates);
+                addToast('success', 'Dream berhasil diperbarui! ✨');
+            } else {
+                // Create new dream
+                const dream: Dream = {
+                    id: generateId(),
+                    userId: userId,
+                    title: newDream.title,
+                    description: newDream.description,
+                    createdAt: new Date(),
+                };
+
+                if (useCloud) {
+                    await saveDreamToCloud(dream);
+                }
+                addStoredDream(dream);
+                addToast('success', useCloud ? 'Dream tersimpan ke cloud! ☁️✨' : 'Dream berhasil ditambahkan! ✨');
             }
-            // Also save to localStorage as backup
-            addStoredDream(dream);
 
             setNewDream({ title: '', description: '' });
+            setEditingDreamId(null);
             setIsModalOpen(false);
             await loadDreams();
-            addToast('success', useCloud ? 'Dream tersimpan ke cloud! ☁️✨' : 'Dream berhasil ditambahkan! ✨');
         } catch (error) {
             console.error('Error saving dream:', error);
             addToast('error', 'Gagal menyimpan dream');
@@ -107,6 +124,18 @@ export default function DreamsPage() {
                 addToast('error', 'Gagal menghapus dream');
             }
         }
+    };
+
+    const handleEdit = (dream: Dream) => {
+        setNewDream({ title: dream.title, description: dream.description || '' });
+        setEditingDreamId(dream.id);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingDreamId(null);
+        setNewDream({ title: '', description: '' });
     };
 
     if (status === 'loading' || !session) {
@@ -131,7 +160,11 @@ export default function DreamsPage() {
                                 <p>Tulis impian dan aspirasimu. Ini adalah langkah pertama menuju goals yang terukur.</p>
                             </div>
                             <button
-                                onClick={() => setIsModalOpen(true)}
+                                onClick={() => {
+                                    setNewDream({ title: '', description: '' });
+                                    setEditingDreamId(null);
+                                    setIsModalOpen(true);
+                                }}
                                 className="neo-btn neo-btn-primary"
                             >
                                 + Tambah Dream
@@ -154,13 +187,23 @@ export default function DreamsPage() {
                                     <div key={dream.id} className={`neo-card ${styles.dreamCard}`}>
                                         <div className={styles.cardHeader}>
                                             <span className={styles.dreamIcon}>✨</span>
-                                            <button
-                                                onClick={() => handleDelete(dream.id)}
-                                                className={styles.deleteBtn}
-                                                aria-label="Delete dream"
-                                            >
-                                                ✕
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => handleEdit(dream)}
+                                                    className={styles.editBtn}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
+                                                    aria-label="Edit dream"
+                                                >
+                                                    ✏️
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(dream.id)}
+                                                    className={styles.deleteBtn}
+                                                    aria-label="Delete dream"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
                                         </div>
                                         <h3>{dream.title}</h3>
                                         {dream.description && <p>{dream.description}</p>}
@@ -183,11 +226,11 @@ export default function DreamsPage() {
 
                     {/* Modal */}
                     {isModalOpen && (
-                        <div className="neo-modal-overlay" onClick={() => setIsModalOpen(false)}>
+                        <div className="neo-modal-overlay" onClick={handleCloseModal}>
                             <div className="neo-modal" onClick={e => e.stopPropagation()}>
                                 <div className="neo-modal-header">
-                                    <h2>Tambah Dream Baru</h2>
-                                    <button onClick={() => setIsModalOpen(false)} className="neo-btn neo-btn-ghost">
+                                    <h2>{editingDreamId ? 'Edit Dream' : 'Tambah Dream Baru'}</h2>
+                                    <button onClick={handleCloseModal} className="neo-btn neo-btn-ghost">
                                         ✕
                                     </button>
                                 </div>
@@ -217,11 +260,11 @@ export default function DreamsPage() {
                                         </div>
                                     </div>
                                     <div className="neo-modal-footer">
-                                        <button type="button" onClick={() => setIsModalOpen(false)} className="neo-btn neo-btn-secondary">
+                                        <button type="button" onClick={handleCloseModal} className="neo-btn neo-btn-secondary">
                                             Batal
                                         </button>
                                         <button type="submit" className="neo-btn neo-btn-primary">
-                                            Simpan Dream
+                                            {editingDreamId ? 'Update Dream' : 'Simpan Dream'}
                                         </button>
                                     </div>
                                 </form>

@@ -34,6 +34,7 @@ function GoalsPageContent() {
     const [dreams, setDreams] = useState<Dream[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
     const [filter, setFilter] = useState<GoalStatus | 'all'>('all');
     const [newGoal, setNewGoal] = useState({
         dreamId: searchParams.get('dreamId') || '',
@@ -83,6 +84,26 @@ function GoalsPageContent() {
         }
     }, [status, loadData]);
 
+    const handleEdit = (goal: Goal) => {
+        setNewGoal({
+            dreamId: goal.dreamId || '',
+            title: goal.title,
+            specific: goal.specific || '',
+            measurable: goal.measurable || '',
+            achievable: goal.achievable || '',
+            relevant: goal.relevant || '',
+            timeBound: goal.timeBound.toISOString().split('T')[0]
+        });
+        setEditingGoalId(goal.id);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        resetForm();
+        setEditingGoalId(null);
+        setIsModalOpen(false);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newGoal.title.trim()) {
@@ -94,29 +115,47 @@ function GoalsPageContent() {
             return;
         }
 
-        const goal: Goal = {
-            id: generateId(),
-            userId: userId,
-            dreamId: newGoal.dreamId || undefined,
-            title: newGoal.title,
-            specific: newGoal.specific,
-            measurable: newGoal.measurable,
-            achievable: newGoal.achievable,
-            relevant: newGoal.relevant,
-            timeBound: new Date(newGoal.timeBound),
-            status: 'active',
-            createdAt: new Date(),
-        };
-
         try {
-            if (useCloud) {
-                await saveGoalToCloud(goal);
+            if (editingGoalId) {
+                const updates = {
+                    dreamId: newGoal.dreamId || undefined,
+                    title: newGoal.title,
+                    specific: newGoal.specific,
+                    measurable: newGoal.measurable,
+                    achievable: newGoal.achievable,
+                    relevant: newGoal.relevant,
+                    timeBound: new Date(newGoal.timeBound),
+                };
+
+                if (useCloud) {
+                    await updateGoalInCloud(editingGoalId, updates);
+                }
+                updateStoredGoal(editingGoalId, updates);
+                addToast('success', 'Goal berhasil diperbarui! 🎯');
+            } else {
+                const goal: Goal = {
+                    id: generateId(),
+                    userId: userId,
+                    dreamId: newGoal.dreamId || undefined,
+                    title: newGoal.title,
+                    specific: newGoal.specific,
+                    measurable: newGoal.measurable,
+                    achievable: newGoal.achievable,
+                    relevant: newGoal.relevant,
+                    timeBound: new Date(newGoal.timeBound),
+                    status: 'active',
+                    createdAt: new Date(),
+                };
+
+                if (useCloud) {
+                    await saveGoalToCloud(goal);
+                }
+                addStoredGoal(goal);
+                addToast('success', useCloud ? 'Goal tersimpan ke cloud! ☁️🎯' : 'Goal berhasil ditambahkan! 🎯');
             }
-            addStoredGoal(goal);
-            resetForm();
-            setIsModalOpen(false);
+
+            handleCloseModal();
             await loadData();
-            addToast('success', useCloud ? 'Goal tersimpan ke cloud! ☁️🎯' : 'Goal berhasil ditambahkan! 🎯');
         } catch (error) {
             console.error('Error saving goal:', error);
             addToast('error', 'Gagal menyimpan goal');
@@ -254,12 +293,22 @@ function GoalsPageContent() {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <button
-                                                    onClick={() => handleDelete(goal.id)}
-                                                    className={styles.deleteBtn}
-                                                >
-                                                    ✕
-                                                </button>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => handleEdit(goal)}
+                                                        className={styles.deleteBtn}
+                                                        style={{ fontSize: '1.2rem', padding: '0 4px' }}
+                                                        aria-label="Edit goal"
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(goal.id)}
+                                                        className={styles.deleteBtn}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <h3>{goal.title}</h3>
@@ -335,11 +384,11 @@ function GoalsPageContent() {
 
                     {/* Modal */}
                     {isModalOpen && (
-                        <div className="neo-modal-overlay" onClick={() => setIsModalOpen(false)}>
+                        <div className="neo-modal-overlay" onClick={handleCloseModal}>
                             <div className="neo-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
                                 <div className="neo-modal-header">
-                                    <h2>Tambah SMART Goal</h2>
-                                    <button onClick={() => setIsModalOpen(false)} className="neo-btn neo-btn-ghost">
+                                    <h2>{editingGoalId ? 'Edit SMART Goal' : 'Tambah SMART Goal'}</h2>
+                                    <button onClick={handleCloseModal} className="neo-btn neo-btn-ghost">
                                         ✕
                                     </button>
                                 </div>
@@ -440,11 +489,11 @@ function GoalsPageContent() {
                                         </div>
                                     </div>
                                     <div className="neo-modal-footer">
-                                        <button type="button" onClick={() => setIsModalOpen(false)} className="neo-btn neo-btn-secondary">
+                                        <button type="button" onClick={handleCloseModal} className="neo-btn neo-btn-secondary">
                                             Batal
                                         </button>
                                         <button type="submit" className="neo-btn neo-btn-primary">
-                                            Simpan Goal
+                                            {editingGoalId ? 'Update Goal' : 'Simpan Goal'}
                                         </button>
                                     </div>
                                 </form>

@@ -9,6 +9,7 @@ import {
     getStoredHabits,
     addStoredHabit,
     deleteStoredHabit,
+    updateStoredHabit,
     getStoredGoals,
     getStoredProgressLogs,
     isHabitCompletedForDate,
@@ -50,6 +51,7 @@ export default function HabitsPage() {
     const [goals, setGoals] = useState<Goal[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
     const [newHabit, setNewHabit] = useState<{
         title: string;
         label: string;
@@ -113,6 +115,23 @@ export default function HabitsPage() {
         return isHabitCompletedForDate(habitId, today);
     };
 
+    const handleEdit = (habit: Habit) => {
+        setNewHabit({
+            title: habit.title,
+            label: habit.label,
+            goalId: habit.goalId || '',
+            frequency: habit.frequency,
+        });
+        setEditingHabitId(habit.id);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setNewHabit({ title: '', label: HABIT_LABELS[0], goalId: '', frequency: 'daily' });
+        setEditingHabitId(null);
+        setIsModalOpen(false);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newHabit.title.trim()) {
@@ -120,25 +139,43 @@ export default function HabitsPage() {
             return;
         }
 
-        const habit: Habit = {
-            id: generateId(),
-            userId: userId,
-            title: newHabit.title,
-            label: newHabit.label,
-            goalId: newHabit.goalId || undefined,
-            frequency: newHabit.frequency,
-            createdAt: new Date(),
-        };
-
         try {
-            if (useCloud) {
-                await saveHabitToCloud(habit);
+            if (editingHabitId) {
+                const updates = {
+                    title: newHabit.title,
+                    label: newHabit.label,
+                    goalId: newHabit.goalId || undefined,
+                    frequency: newHabit.frequency,
+                };
+
+                if (useCloud) {
+                    const currentHabit = habits.find(h => h.id === editingHabitId);
+                    if (currentHabit) {
+                        await saveHabitToCloud({ ...currentHabit, ...updates });
+                    }
+                }
+                updateStoredHabit(editingHabitId, updates);
+                addToast('success', 'Habit berhasil diperbarui! ✅');
+            } else {
+                const habit: Habit = {
+                    id: generateId(),
+                    userId: userId,
+                    title: newHabit.title,
+                    label: newHabit.label,
+                    goalId: newHabit.goalId || undefined,
+                    frequency: newHabit.frequency,
+                    createdAt: new Date(),
+                };
+
+                if (useCloud) {
+                    await saveHabitToCloud(habit);
+                }
+                addStoredHabit(habit);
+                addToast('success', useCloud ? 'Habit tersimpan ke cloud! ☁️✅' : 'Habit berhasil ditambahkan! ✅');
             }
-            addStoredHabit(habit);
-            setNewHabit({ title: '', label: HABIT_LABELS[0], goalId: '', frequency: 'daily' });
-            setIsModalOpen(false);
+
+            handleCloseModal();
             await loadData();
-            addToast('success', useCloud ? 'Habit tersimpan ke cloud! ☁️✅' : 'Habit berhasil ditambahkan! ✅');
         } catch (error) {
             console.error('Error saving habit:', error);
             addToast('error', 'Gagal menyimpan habit');
@@ -294,13 +331,23 @@ export default function HabitsPage() {
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        <button
-                                                            onClick={() => handleDelete(habit.id)}
-                                                            className={styles.deleteBtn}
-                                                            aria-label="Delete habit"
-                                                        >
-                                                            ✕
-                                                        </button>
+                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                            <button
+                                                                onClick={() => handleEdit(habit)}
+                                                                className={styles.deleteBtn}
+                                                                style={{ fontSize: '1.2rem', padding: '0 4px' }}
+                                                                aria-label="Edit habit"
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(habit.id)}
+                                                                className={styles.deleteBtn}
+                                                                aria-label="Delete habit"
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 );
                                             })}
@@ -313,11 +360,11 @@ export default function HabitsPage() {
 
                     {/* Modal */}
                     {isModalOpen && (
-                        <div className="neo-modal-overlay" onClick={() => setIsModalOpen(false)}>
+                        <div className="neo-modal-overlay" onClick={handleCloseModal}>
                             <div className="neo-modal" onClick={e => e.stopPropagation()}>
                                 <div className="neo-modal-header">
-                                    <h2>Tambah Habit Baru</h2>
-                                    <button onClick={() => setIsModalOpen(false)} className="neo-btn neo-btn-ghost">
+                                    <h2>{editingHabitId ? 'Edit Habit' : 'Tambah Habit Baru'}</h2>
+                                    <button onClick={handleCloseModal} className="neo-btn neo-btn-ghost">
                                         ✕
                                     </button>
                                 </div>
@@ -394,11 +441,11 @@ export default function HabitsPage() {
                                         </div>
                                     </div>
                                     <div className="neo-modal-footer">
-                                        <button type="button" onClick={() => setIsModalOpen(false)} className="neo-btn neo-btn-secondary">
+                                        <button type="button" onClick={handleCloseModal} className="neo-btn neo-btn-secondary">
                                             Batal
                                         </button>
                                         <button type="submit" className="neo-btn neo-btn-primary">
-                                            Simpan Habit
+                                            {editingHabitId ? 'Update Habit' : 'Simpan Habit'}
                                         </button>
                                     </div>
                                 </form>
